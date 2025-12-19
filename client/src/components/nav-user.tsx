@@ -84,7 +84,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/dashboard/profile'}>
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
@@ -98,7 +98,15 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={async () => {
+                try {
+                    const { auth } = await import('@/lib/firebase');
+                    await auth.signOut();
+                    window.location.href = '/login'; 
+                } catch (error) {
+                    console.error("Logout failed", error);
+                }
+            }}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

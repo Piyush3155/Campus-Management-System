@@ -5,6 +5,9 @@ import {
   IconCamera,
   IconChartBar,
   IconDashboard,
+  IconBuilding,
+  IconBook,
+  IconSchool,
   IconDatabase,
   IconFileAi,
   IconFileDescription,
@@ -32,17 +35,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/context/AuthContext"
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
+  // Mock fallback user if needed, but we will use real user
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
@@ -63,6 +63,31 @@ const data = {
     {
       title: "Team",
       url: "#",
+      icon: IconUsers,
+    },
+    {
+      title: "Users",
+      url: "/dashboard/users",
+      icon: IconUsers,
+    },
+    {
+      title: "Departments",
+      url: "/dashboard/departments",
+      icon: IconBuilding,
+    },
+    {
+      title: "Courses",
+      url: "/dashboard/courses",
+      icon: IconBook,
+    },
+    {
+      title: "Academics",
+      url: "/dashboard/academics",
+      icon: IconSchool,
+    },
+    {
+      title: "Staff",
+      url: "/dashboard/staff",
       icon: IconUsers,
     },
   ],
@@ -151,6 +176,14 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth();
+
+  const sidebarUser = {
+    name: user?.displayName || "User",
+    email: user?.email || "user@example.com",
+    avatar: user?.photoURL || "",
+  };
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -174,7 +207,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={sidebarUser} />
       </SidebarFooter>
     </Sidebar>
   )
