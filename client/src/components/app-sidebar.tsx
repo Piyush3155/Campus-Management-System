@@ -116,11 +116,6 @@ const staffNav = [
     icon: IconFileDescription,
   },
   {
-    title: "Students",
-    url: "/staff/students",
-    icon: IconSchool,
-  },
-  {
     title: "Study Materials",
     url: "/staff/notes",
     icon: IconBook,
