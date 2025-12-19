@@ -20,6 +20,10 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconCertificate,
+  IconSpeakerphone,
+  IconBell,
+  IconLock,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -45,26 +49,7 @@ const data = {
       url: "/dashboard",
       icon: IconDashboard,
     },
-    {
-      title: "Lifecycle",
-      url: "#",
-      icon: IconListDetails,
-    },
-    {
-      title: "Analytics",
-      url: "#",
-      icon: IconChartBar,
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
+    
     {
       title: "Users",
       url: "/dashboard/users",
@@ -90,6 +75,31 @@ const data = {
       url: "/dashboard/staff",
       icon: IconUsers,
     },
+    {
+      title: "Students",
+      url: "/dashboard/students",
+      icon: IconSchool,
+    },
+    {
+      title: "Assignments",
+      url: "/dashboard/assignments",
+      icon: IconFileDescription,
+    },
+    {
+      title: "Exams & Results",
+      url: "/dashboard/exams",
+      icon: IconCertificate,
+    },
+    {
+      title: "Notices",
+      url: "/dashboard/notices",
+      icon: IconSpeakerphone,
+    },
+    {
+        title: "Report & Analytics",
+        url: "/dashboard/reports",
+        icon: IconChartBar
+    }
   ],
   navClouds: [
     {
@@ -142,8 +152,18 @@ const data = {
   navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/dashboard/settings",
       icon: IconSettings,
+    },
+    {
+      title: "Notifications",
+      url: "/dashboard/notifications",
+      icon: IconBell,
+    },
+    {
+      title: "Security Audit",
+      url: "/dashboard/security",
+      icon: IconLock,
     },
     {
       title: "Get Help",
