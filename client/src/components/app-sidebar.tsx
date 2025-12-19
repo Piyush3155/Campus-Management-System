@@ -142,6 +142,39 @@ const staffNav = [
   },
 ];
 
+const studentNav = [
+  {
+    title: "Dashboard",
+    url: "/student/dashboard",
+    icon: IconDashboard,
+  },
+  {
+    title: "Academics",
+    url: "/student/academics",
+    icon: IconBook,
+  },
+  {
+    title: "Assignments",
+    url: "/student/assignments",
+    icon: IconFileDescription,
+  },
+  {
+    title: "Attendance",
+    url: "/student/attendance",
+    icon: IconChartBar,
+  },
+  {
+    title: "Profile",
+    url: "/student/profile",
+    icon: IconUserCircle,
+  },
+  {
+    title: "Notifications",
+    url: "/student/notifications",
+    icon: IconBell,
+  },
+];
+
 const data = {
   navSecondary: [
     {
@@ -185,7 +218,7 @@ export function AppSidebar({ role = "admin", ...props }: AppSidebarProps) {
     avatar: user?.photoURL || "",
   };
 
-  const navItems = role === "staff" ? staffNav : adminNav;
+  const navItems = role === "staff" ? staffNav : role === "student" ? studentNav : adminNav;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
