@@ -46,58 +46,58 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: "/admin-dashboard",
       icon: IconDashboard,
     },
     
     {
       title: "Users",
-      url: "/dashboard/users",
+      url: "/admin-dashboard/users",
       icon: IconUsers,
     },
     {
       title: "Departments",
-      url: "/dashboard/departments",
+      url: "/admin-dashboard/departments",
       icon: IconBuilding,
     },
     {
       title: "Courses",
-      url: "/dashboard/courses",
+      url: "/admin-dashboard/courses",
       icon: IconBook,
     },
     {
       title: "Academics",
-      url: "/dashboard/academics",
+      url: "/admin-dashboard/academics",
       icon: IconSchool,
     },
     {
       title: "Staff",
-      url: "/dashboard/staff",
+      url: "/admin-dashboard/staff",
       icon: IconUsers,
     },
     {
       title: "Students",
-      url: "/dashboard/students",
+      url: "/admin-dashboard/students",
       icon: IconSchool,
     },
     {
       title: "Assignments",
-      url: "/dashboard/assignments",
+      url: "/admin-dashboard/assignments",
       icon: IconFileDescription,
     },
     {
       title: "Exams & Results",
-      url: "/dashboard/exams",
+      url: "/admin-dashboard/exams",
       icon: IconCertificate,
     },
     {
       title: "Notices",
-      url: "/dashboard/notices",
+      url: "/admin-dashboard/notices",
       icon: IconSpeakerphone,
     },
     {
         title: "Report & Analytics",
-        url: "/dashboard/reports",
+        url: "/admin-dashboard/reports",
         icon: IconChartBar
     }
   ],
@@ -152,17 +152,17 @@ const data = {
   navSecondary: [
     {
       title: "Settings",
-      url: "/dashboard/settings",
+      url: "/admin-dashboard/settings",
       icon: IconSettings,
     },
     {
       title: "Notifications",
-      url: "/dashboard/notifications",
+      url: "/admin-dashboard/notifications",
       icon: IconBell,
     },
     {
       title: "Security Audit",
-      url: "/dashboard/security",
+      url: "/admin-dashboard/security",
       icon: IconLock,
     },
     {

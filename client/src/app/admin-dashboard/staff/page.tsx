@@ -232,7 +232,7 @@ export default function StaffPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/staff/${staff.id}`}>View Profile</Link>
+                                                    <Link href={`/admin-dashboard/staff/${staff.id}`}>View Profile</Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem>Edit Details</DropdownMenuItem>
                                                 <DropdownMenuSeparator />

@@ -84,7 +84,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => window.location.href = '/dashboard/profile'}>
+              <DropdownMenuItem onClick={() => window.location.href = '/admin-dashboard/profile'}>
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>

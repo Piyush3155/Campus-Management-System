@@ -13,7 +13,7 @@ export function AccessDenied() {
         You do not have the necessary permissions to view this page. Please contact your administrator if you believe this is an error.
       </p>
       <Button asChild>
-        <Link href="/dashboard">Return to Dashboard</Link>
+        <Link href="/admin-dashboard">Return to Dashboard</Link>
       </Button>
     </div>
   )

@@ -244,7 +244,7 @@ export default function StudentsPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/students/${student.id}`}>View Profile</Link>
+                                                    <Link href={`/admin-dashboard/students/${student.id}`}>View Profile</Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem>Edit Details</DropdownMenuItem>
                                                 <DropdownMenuSeparator />

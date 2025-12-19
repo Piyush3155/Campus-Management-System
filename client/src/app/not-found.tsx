@@ -15,7 +15,7 @@ export default function NotFound() {
         </p>
         <div className="flex items-center space-x-2">
           <Button asChild>
-            <Link href="/dashboard">Return to Dashboard</Link>
+            <Link href="/admin-dashboard">Return to Dashboard</Link>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/">Go Home</Link>

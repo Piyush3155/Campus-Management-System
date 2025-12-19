@@ -13,13 +13,13 @@ const actions = [
     label: "Add Student",
     icon: UserPlus,
     variant: "default" as const,
-    href: "/dashboard/users",
+    href: "/admin-dashboard/users",
   },
   {
     label: "Add Staff",
     icon: UserPlus, 
     variant: "outline" as const,
-    href: "/dashboard/users",
+    href: "/admin-dashboard/users",
   },
   {
     label: "Create Notice",
@@ -31,7 +31,7 @@ const actions = [
     label: "Add Department",
     icon: Building,
     variant: "secondary" as const,
-    href: "/dashboard/departments",
+    href: "/admin-dashboard/departments",
   },
 ]
 
