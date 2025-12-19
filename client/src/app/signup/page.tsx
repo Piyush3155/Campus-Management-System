@@ -7,12 +7,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
@@ -24,8 +25,16 @@ export default function SignupPage() {
   }, [user, router]);
 
   const handleSignup = async () => {
-    if (!email || !password) {
-        toast.error("Please enter both email and password");
+    if (!email || !password || !confirmPassword) {
+        toast.error("Please fill in all fields");
+        return;
+    }
+    if (password !== confirmPassword) {
+        toast.error("Passwords do not match");
+        return;
+    }
+    if (password.length < 6) {
+        toast.error("Password must be at least 6 characters");
         return;
     }
     setLoading(true);
@@ -94,6 +103,21 @@ export default function SignupPage() {
           />
         </div>
       </div>
+      <div className="space-y-2">
+        <label htmlFor="confirmPassword" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Confirm Password</label>
+        <div className="relative">
+          <ShieldCheck className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input
+            id="confirmPassword"
+            type="password"
+            className="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </div>
+      </div>
     </AuthCard>
   );
 }
+
