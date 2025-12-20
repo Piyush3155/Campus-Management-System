@@ -189,6 +189,24 @@ export class UsersService {
     });
   }
 
+  /**
+   * Delete a user (soft delete by deactivating, or hard delete)
+   */
+  async deleteUser(userId: string) {
+    // Soft delete - just deactivate the user
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: false },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+  }
+
   async storeFcmToken(userId: string, token: string, deviceType: string = 'WEB') {
     // First, check if token already exists for this user and device
     const existingToken = await this.prisma.userTokens.findFirst({

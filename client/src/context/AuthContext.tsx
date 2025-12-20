@@ -3,17 +3,9 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { onAuthStateChanged, User as FirebaseUser, signOut as firebaseSignOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { 
-  loginWithCredentials, 
-  loginWithFirebase, 
-  validateToken, 
-  refreshToken,
-  type AuthUser, 
+import {
+  type AuthUser,
 } from "@/lib/auth-api";
-
-// Storage keys
-const TOKEN_KEY = "cms_access_token";
-const USER_KEY = "cms_user";
 
 /**
  * Unified user type for the application
@@ -27,12 +19,12 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
-  
+
   // Auth methods
-  loginCredentials: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginGoogle: () => Promise<{ success: boolean; error?: string }>;
+  loginCredentials: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string }>;
+  loginGoogle: () => Promise<{ success: boolean; error?: string; redirectUrl?: string }>;
   logout: () => Promise<void>;
-  
+
   // Role checks
   isAdmin: boolean;
   isStaff: boolean;
@@ -58,38 +50,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   /**
-   * Save auth data to storage
+   * Check session from API
    */
-  const saveAuthData = useCallback((accessToken: string, userData: AuthUser) => {
-    localStorage.setItem(TOKEN_KEY, accessToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(userData));
-    setToken(accessToken);
-    setUser(userData);
-  }, []);
+  const checkSession = useCallback(async () => {
+    try {
+      const response = await fetch('/api/auth/session');
+      const data = await response.json();
 
-  /**
-   * Clear auth data from storage
-   */
-  const clearAuthData = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    setToken(null);
-    setUser(null);
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+        setToken(data.user.token);
+        return true;
+      } else {
+        setUser(null);
+        setToken(null);
+        return false;
+      }
+    } catch (error) {
+      console.error('Session check error:', error);
+      setUser(null);
+      setToken(null);
+      return false;
+    }
   }, []);
 
   /**
    * Login with credentials (Admin/Staff)
    */
   const loginCredentials = useCallback(async (email: string, password: string) => {
-    const result = await loginWithCredentials(email, password);
-    
-    if (result.success && result.data) {
-      saveAuthData(result.data.access_token, result.data.user);
-      return { success: true };
+    try {
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'login',
+          email,
+          password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setUser(result.user);
+        setToken(result.token);
+        return { success: true, redirectUrl: result.redirectUrl };
+      }
+
+      return { success: false, error: result.error };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: 'Network error' };
     }
-    
-    return { success: false, error: result.error };
-  }, [saveAuthData]);
+  }, []);
 
   /**
    * Login with Google (Students)
@@ -97,21 +112,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const loginGoogle = useCallback(async () => {
     const firebaseUser = auth.currentUser;
-    
+
     if (!firebaseUser) {
       return { success: false, error: "No Firebase user found" };
     }
 
     try {
       const idToken = await firebaseUser.getIdToken();
-      const result = await loginWithFirebase(idToken);
-      
-      if (result.success && result.data) {
-        saveAuthData(result.data.access_token, result.data.user);
-        setUser(prev => prev ? { ...prev, firebaseUser } : null);
-        return { success: true };
+
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'login',
+          firebaseToken: idToken,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setUser({ ...result.user, firebaseUser });
+        setToken(result.token);
+        return { success: true, redirectUrl: result.redirectUrl };
       }
-      
+
       // If backend auth fails, sign out from Firebase
       await firebaseSignOut(auth);
       return { success: false, error: result.error };
@@ -120,10 +147,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await firebaseSignOut(auth);
       return { success: false, error: "Failed to authenticate with server" };
     }
-  }, [saveAuthData]);
+  }, []);
 
   /**
-   * Logout - Clear all auth data
+   * Logout - Clear session
    */
   const logout = useCallback(async () => {
     try {
@@ -131,50 +158,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (auth.currentUser) {
         await firebaseSignOut(auth);
       }
+
+      // Clear session
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'logout' }),
+      });
+
+      setUser(null);
+      setToken(null);
     } catch (error) {
-      console.error("Firebase signout error:", error);
+      console.error("Logout error:", error);
     }
-    clearAuthData();
-  }, [clearAuthData]);
+  }, []);
 
   /**
    * Initialize auth state on mount
    */
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        // Check for stored token
-        const storedToken = localStorage.getItem(TOKEN_KEY);
-        const storedUser = localStorage.getItem(USER_KEY);
-
-        if (storedToken && storedUser) {
-          // Validate the stored token
-          const validationResult = await validateToken(storedToken);
-          
-          if (validationResult.success && validationResult.data?.valid) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
-          } else {
-            // Try to refresh the token
-            const refreshResult = await refreshToken(storedToken);
-            
-            if (refreshResult.success && refreshResult.data) {
-              saveAuthData(refreshResult.data.access_token, refreshResult.data.user);
-            } else {
-              clearAuthData();
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-        clearAuthData();
-      } finally {
-        setLoading(false);
-      }
+      await checkSession();
+      setLoading(false);
     };
 
     initAuth();
-  }, [saveAuthData, clearAuthData]);
+  }, [checkSession]);
 
   /**
    * Listen for Firebase auth state changes (for students)
@@ -197,10 +208,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!token && !!user;
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
+    <AuthContext.Provider value={{
+      user,
       token,
-      loading, 
+      loading,
       isAuthenticated,
       loginCredentials,
       loginGoogle,

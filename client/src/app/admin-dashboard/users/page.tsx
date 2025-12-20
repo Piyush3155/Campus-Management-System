@@ -55,6 +55,8 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { fetchUsers, createStaff, updateUserStatus, deleteUser } from "@/app/actions/user/main"
+import { useEffect } from "react"
 
 // --- Types ---
 type User = {
@@ -67,23 +69,17 @@ type User = {
   avatar?: string
 }
 
-// --- Mock Data ---
-const initialUsers: User[] = [
-  { id: "1", name: "Alice Johnson", email: "alice@example.com", role: "Admin", department: "IT", status: "Active" },
-  { id: "2", name: "Bob Smith", email: "bob@example.com", role: "Staff", department: "HR", status: "Active" },
-  { id: "3", name: "Charlie Brown", email: "charlie@example.com", role: "Student", department: "Computer Science", status: "Inactive" },
-  { id: "4", name: "Diana Prince", email: "diana@example.com", role: "Staff", department: "Finance", status: "Active" },
-  { id: "5", name: "Evan Wright", email: "evan@example.com", role: "Student", department: "Mechanical Eng", status: "Active" },
-]
 
 export default function UsersPage() {
-  const [data, setData] = useState<User[]>(initialUsers)
+  const [data, setData] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null) // For editing
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // --- Form States for Add/Edit ---
   const [formData, setFormData] = useState({
@@ -94,32 +90,99 @@ export default function UsersPage() {
       autoGenerate: false
   })
 
+  // Load users on component mount
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  const loadUsers = async () => {
+    setLoading(true)
+    try {
+      const result = await fetchUsers()
+      if (result.success && result.data) {
+        // Map backend users to frontend format
+        const mappedUsers: User[] = result.data.users.map(user => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role === 'ADMIN' ? 'Admin' : user.role === 'STAFF' ? 'Staff' : 'Student',
+          department: "", // Backend doesn't have department yet
+          status: user.isActive ? 'Active' : 'Inactive',
+          avatar: user.profileImageUrl
+        }))
+        setData(mappedUsers)
+      } else {
+        toast.error(result.error || 'Failed to load users')
+      }
+    } catch (error) {
+      console.error('Load users error:', error)
+      toast.error('Failed to load users')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const resetForm = () => {
       setFormData({ name: "", email: "", role: "Student", department: "", autoGenerate: false })
       setCurrentUser(null)
   }
 
-  const handleSaveUser = () => {
-      // In a real app, this would be an API call
+  const handleSaveUser = async () => {
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+    try {
       if (currentUser) {
-          // Edit logic
-          setData(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...formData, role: formData.role as any } : u))
+        // Edit logic - update status for now
+        const isActive = formData.role !== "Student" // Assuming only students can be inactive for now
+        const result = await updateUserStatus(currentUser.id, isActive)
+        if (result.success) {
+          setData(prev => prev.map(u => u.id === currentUser.id ? { ...u, status: isActive ? 'Active' : 'Inactive' } : u))
           toast.success("User updated successfully")
+        } else {
+          toast.error(result.error || 'Failed to update user')
+        }
       } else {
-          // Create logic
+        // Create logic - only staff for now
+        if (formData.role !== 'Staff') {
+          toast.error('Only staff creation is currently supported')
+          return
+        }
+
+        const staffData = {
+          name: formData.name,
+          username: formData.email.split('@')[0], // Generate username from email
+          email: formData.email,
+          password: formData.autoGenerate ? Math.random().toString(36).slice(-8) : 'defaultPass123', // In real app, generate proper password
+          phone: undefined
+        }
+
+        const result = await createStaff(staffData)
+        if (result.success && result.data) {
           const newUser: User = {
-              id: Math.random().toString(36).substr(2, 9),
-              name: formData.name,
-              email: formData.email,
-              role: formData.role as any,
-              department: formData.department,
-              status: "Active" // Default
+            id: result.data.id,
+            name: result.data.name,
+            email: result.data.email,
+            role: 'Staff',
+            department: formData.department,
+            status: 'Active'
           }
-           setData(prev => [...prev, newUser])
-           toast.success(formData.autoGenerate ? "User created & credentials emailed" : "User created successfully")
+          setData(prev => [...prev, newUser])
+          toast.success(formData.autoGenerate ? "User created & credentials emailed" : "User created successfully")
+          // Reload users to get updated list
+          await loadUsers()
+        } else {
+          toast.error(result.error || 'Failed to create user')
+        }
       }
       setIsSheetOpen(false)
       resetForm()
+    } catch (error) {
+      console.error('Save user error:', error)
+      toast.error('Failed to save user')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
   
   const handleEdit = (user: User) => {
@@ -134,11 +197,21 @@ export default function UsersPage() {
       setIsSheetOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-      if(confirm("Are you sure you want to deactivate/delete this user?")) {
+  const handleDelete = async (id: string) => {
+    if(confirm("Are you sure you want to deactivate/delete this user?")) {
+      try {
+        const result = await deleteUser(id)
+        if (result.success) {
           setData(prev => prev.filter(u => u.id !== id))
           toast.success("User deleted successfully")
+        } else {
+          toast.error(result.error || 'Failed to delete user')
+        }
+      } catch (error) {
+        console.error('Delete user error:', error)
+        toast.error('Failed to delete user')
       }
+    }
   }
 
   // --- Columns Definition ---
@@ -350,8 +423,8 @@ export default function UsersPage() {
                             </div>
                         )}
                         
-                        <Button className="mt-4" onClick={handleSaveUser}>
-                            {currentUser ? 'Save Changes' : 'Create User'}
+                        <Button className="mt-4" onClick={handleSaveUser} disabled={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : currentUser ? 'Save Changes' : 'Create User'}
                         </Button>
                     </div>
                 </SheetContent>
@@ -439,7 +512,16 @@ export default function UsersPage() {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  Loading users...
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}

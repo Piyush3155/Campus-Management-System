@@ -1,18 +1,6 @@
 "use client"
 
 import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  SortingState,
-  ColumnFiltersState,
-  VisibilityState,
-} from "@tanstack/react-table"
-import {
   Table,
   TableBody,
   TableCell,
@@ -31,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useState } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { 
     MoreHorizontal, 
     ArrowUpDown, 
@@ -40,7 +28,10 @@ import {
     FileEdit,
     Trash2,
     BookOpen,
-    Filter
+    Filter,
+    Loader2,
+    ChevronUp,
+    ChevronDown
 } from "lucide-react"
 import {
   Select,
@@ -53,191 +44,321 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { 
+  fetchCourses, 
+  createCourse, 
+  updateCourse, 
+  deleteCourse,
+  type Course,
+  type CourseType,
+  type CreateCourseData,
+  type UpdateCourseData
+} from "@/app/actions/course/main"
+import { fetchDepartments, type Department } from "@/app/actions/setup/main"
 
-// --- Types ---
-export type Course = {
-  id: string
-  name: string // e.g., Bachelor of Computer Applications
-  code: string // e.g., BCA
-  duration: string // e.g., 3 Years
-  department: string
-  type: "Undergraduate" | "Postgraduate" | "Diploma" | "Certificate"
-  semesters: number
+// Column configuration
+type SortDirection = 'asc' | 'desc' | null;
+type SortConfig = { key: keyof Course | 'departmentName'; direction: SortDirection };
+
+// Form state type
+interface CourseFormData {
+  title: string;
+  code: string;
+  description: string;
+  type: CourseType;
+  duration: string;
+  totalSemesters: number;
+  credits: number;
+  maxEnrollment: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  departmentId: string;
 }
 
-// --- Mock Data ---
-export const initialCourses: Course[] = [
-  { id: "1", name: "Bachelor of Computer Applications", code: "BCA", duration: "3 Years", department: "Computer Science", type: "Undergraduate", semesters: 6 },
-  { id: "2", name: "Master of Computer Applications", code: "MCA", duration: "2 Years", department: "Computer Science", type: "Postgraduate", semesters: 4 },
-  { id: "3", name: "Master of Business Administration", code: "MBA", duration: "2 Years", department: "Management", type: "Postgraduate", semesters: 4 },
-  { id: "4", name: "Bachelor of Business Administration", code: "BBA", duration: "3 Years", department: "Management", type: "Undergraduate", semesters: 6 },
-  { id: "5", name: "B.Tech in Mechanical Engineering", code: "B.Tech ME", duration: "4 Years", department: "Mechanical Engineering", type: "Undergraduate", semesters: 8 },
-]
+const initialFormData: CourseFormData = {
+  title: "",
+  code: "",
+  description: "",
+  type: "UNDERGRADUATE",
+  duration: "3 Years",
+  totalSemesters: 6,
+  credits: 0,
+  maxEnrollment: 100,
+  status: "ACTIVE",
+  departmentId: ""
+};
 
 export default function CoursesPage() {
-  const [data, setData] = useState<Course[]>(initialCourses)
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
+  // Data states
+  const [courses, setCourses] = useState<Course[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Table states
+  const [searchQuery, setSearchQuery] = useState("")
+  const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'title', direction: 'asc' })
+  const [currentPage, setCurrentPage] = useState(0)
+  const [visibleColumns, setVisibleColumns] = useState({
+    title: true,
+    code: true,
+    type: true,
+    department: true,
+    duration: true,
+    totalSemesters: true,
+    status: true,
+    actions: true
+  })
+  const pageSize = 10
+
+  // Sheet/form states
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null)
+  const [formData, setFormData] = useState<CourseFormData>(initialFormData)
 
-  // --- Form States ---
-  const [formData, setFormData] = useState<Partial<Course>>({
-      name: "",
-      code: "",
-      duration: "3 Years",
-      department: "Computer Science",
-      type: "Undergraduate",
-      semesters: 6
-  })
+  // Load courses and departments
+  useEffect(() => {
+    let mounted = true;
+    
+    async function loadData() {
+      setIsLoading(true)
+      try {
+        const [coursesResult, departmentsResult] = await Promise.all([
+          fetchCourses(),
+          fetchDepartments()
+        ]);
+        
+        if (!mounted) return;
 
-  const resetForm = () => {
-      setFormData({ 
-        name: "", 
-        code: "", 
-        duration: "3 Years",
-        department: "Computer Science",
-        type: "Undergraduate",
-        semesters: 6
-      })
-      setCurrentCourse(null)
-  }
+        if (coursesResult.success && coursesResult.data) {
+          setCourses(coursesResult.data)
+        } else {
+          toast.error(coursesResult.error || "Failed to load courses")
+        }
 
-  const handleSave = () => {
-    if (!formData.name || !formData.code) {
-        toast.error("Name and Code are required")
-        return
+        if (departmentsResult.success && departmentsResult.data) {
+          setDepartments(departmentsResult.data)
+        }
+      } catch (error) {
+        if (mounted) {
+          console.error("Error loading data:", error)
+          toast.error("Failed to load data")
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+    
+    loadData()
+    
+    return () => {
+      mounted = false;
+    }
+  }, [])
+
+  const resetForm = useCallback(() => {
+    setFormData(initialFormData)
+    setCurrentCourse(null)
+  }, [])
+
+  const handleSave = async () => {
+    if (!formData.title || !formData.code || !formData.departmentId) {
+      toast.error("Title, Code, and Department are required")
+      return
     }
 
+    setIsSaving(true)
+    try {
       if (currentCourse) {
-          // Edit logic
-          setData(prev => prev.map(c => c.id === currentCourse.id ? { ...c, ...formData } as Course : c))
+        // Update existing course
+        const updateData: UpdateCourseData = {
+          title: formData.title,
+          code: formData.code,
+          description: formData.description || undefined,
+          type: formData.type,
+          duration: formData.duration,
+          totalSemesters: formData.totalSemesters,
+          credits: formData.credits || undefined,
+          maxEnrollment: formData.maxEnrollment || undefined,
+          status: formData.status,
+          departmentId: formData.departmentId
+        }
+        
+        const result = await updateCourse(currentCourse.id, updateData)
+        
+        if (result.success && result.data) {
+          setCourses(prev => prev.map(c => c.id === currentCourse.id ? result.data! : c))
           toast.success("Course updated successfully")
+        } else {
+          toast.error(result.error || "Failed to update course")
+          return
+        }
       } else {
-          // Create logic
-          const newCourse: Course = {
-              ...formData as Course,
-              id: Math.random().toString(36).substr(2, 9),
-          }
-           setData(prev => [...prev, newCourse])
-           toast.success("Course created successfully")
+        // Create new course
+        const createData: CreateCourseData = {
+          title: formData.title,
+          code: formData.code,
+          description: formData.description || undefined,
+          type: formData.type,
+          duration: formData.duration,
+          totalSemesters: formData.totalSemesters,
+          credits: formData.credits || undefined,
+          maxEnrollment: formData.maxEnrollment || undefined,
+          status: formData.status,
+          departmentId: formData.departmentId
+        }
+        
+        const result = await createCourse(createData)
+        
+        if (result.success && result.data) {
+          setCourses(prev => [...prev, result.data!])
+          toast.success("Course created successfully")
+        } else {
+          toast.error(result.error || "Failed to create course")
+          return
+        }
       }
+      
       setIsSheetOpen(false)
       resetForm()
+    } catch (error) {
+      console.error("Save error:", error)
+      toast.error("An error occurred while saving")
+    } finally {
+      setIsSaving(false)
+    }
   }
   
-  const handleEdit = (course: Course) => {
-      setCurrentCourse(course)
-      setFormData({
-          name: course.name,
-          code: course.code,
-          duration: course.duration,
-          department: course.department,
-          type: course.type,
-          semesters: course.semesters
-      })
-      setIsSheetOpen(true)
-  }
+  const handleEdit = useCallback((course: Course) => {
+    setCurrentCourse(course)
+    setFormData({
+      title: course.title,
+      code: course.code,
+      description: course.description || "",
+      type: course.type,
+      duration: course.duration,
+      totalSemesters: course.totalSemesters,
+      credits: course.credits || 0,
+      maxEnrollment: course.maxEnrollment || 100,
+      status: course.status,
+      departmentId: course.departmentId
+    })
+    setIsSheetOpen(true)
+  }, [])
 
-  const handleDelete = (id: string) => {
-      if(confirm("Are you sure you want to delete this course?")) {
-          setData(prev => prev.filter(c => c.id !== id))
-          toast.success("Course deleted successfully")
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this course?")) return
+    
+    try {
+      const result = await deleteCourse(id)
+      
+      if (result.success) {
+        setCourses(prev => prev.filter(c => c.id !== id))
+        toast.success("Course deleted successfully")
+      } else {
+        toast.error(result.error || "Failed to delete course")
       }
+    } catch (error) {
+      console.error("Delete error:", error)
+      toast.error("An error occurred while deleting")
+    }
   }
 
-  // --- Columns Definition ---
-  const columns: ColumnDef<Course>[] = [
-    {
-      accessorKey: "name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Course Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => <div className="font-medium flex items-center gap-2"><BookOpen className="h-4 w-4 text-muted-foreground" /> {row.getValue("name")}</div>,
-    },
-    {
-      accessorKey: "code",
-      header: "Code",
-      cell: ({ row }) => <Badge variant="outline">{row.getValue("code")}</Badge>,
-    },
-    {
-      accessorKey: "type",
-      header: "Type",
-      cell: ({ row }) => <div>{row.getValue("type")}</div>,
-    },
-    {
-        accessorKey: "department",
-        header: "Department",
-        cell: ({ row }) => <div>{row.getValue("department")}</div>,
-    },
-    {
-        accessorKey: "duration",
-        header: "Duration",
-        cell: ({ row }) => <div>{row.getValue("duration")}</div>,
-    },
-    {
-        accessorKey: "semesters",
-        header: "Semesters",
-        cell: ({ row }) => <div className="text-center">{row.getValue("semesters")}</div>,
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const course = row.original
-  
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleEdit(course)}>
-                <FileEdit className="mr-2 h-4 w-4" /> Edit Details
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(course.id)}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete Course
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
-  ]
+  // Sorting
+  const handleSort = useCallback((key: keyof Course | 'departmentName') => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }))
+  }, [])
 
-  const table = useReactTable({
-    data,
-    columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
-  })
+  // Filtered and sorted data
+  const filteredAndSortedCourses = useMemo(() => {
+    let result = [...courses]
+    
+    // Filter by search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(course => 
+        course.title.toLowerCase().includes(query) ||
+        course.code.toLowerCase().includes(query) ||
+        course.department?.name?.toLowerCase().includes(query)
+      )
+    }
+    
+    // Filter by type
+    if (typeFilter !== "all") {
+      result = result.filter(course => course.type === typeFilter)
+    }
+    
+    // Sort
+    if (sortConfig.direction) {
+      result.sort((a, b) => {
+        let aVal: string | number = '';
+        let bVal: string | number = '';
+        
+        if (sortConfig.key === 'departmentName') {
+          aVal = a.department?.name || '';
+          bVal = b.department?.name || '';
+        } else {
+          aVal = a[sortConfig.key] as string | number ?? '';
+          bVal = b[sortConfig.key] as string | number ?? '';
+        }
+        
+        if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase();
+          bVal = (bVal as string).toLowerCase();
+        }
+        
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      })
+    }
+    
+    return result
+  }, [courses, searchQuery, typeFilter, sortConfig])
+
+  // Pagination
+  const paginatedCourses = useMemo(() => {
+    const start = currentPage * pageSize
+    return filteredAndSortedCourses.slice(start, start + pageSize)
+  }, [filteredAndSortedCourses, currentPage, pageSize])
+
+  const totalPages = Math.ceil(filteredAndSortedCourses.length / pageSize)
+  const canPreviousPage = currentPage > 0
+  const canNextPage = currentPage < totalPages - 1
+
+  // Sort icon helper
+  const SortIcon = ({ columnKey }: { columnKey: keyof Course | 'departmentName' }) => {
+    if (sortConfig.key !== columnKey) return <ArrowUpDown className="ml-2 h-4 w-4" />
+    return sortConfig.direction === 'asc' 
+      ? <ChevronUp className="ml-2 h-4 w-4" />
+      : <ChevronDown className="ml-2 h-4 w-4" />
+  }
+
+  // Type display helper
+  const getTypeLabel = (type: CourseType) => {
+    const labels: Record<CourseType, string> = {
+      UNDERGRADUATE: 'Undergraduate',
+      POSTGRADUATE: 'Postgraduate',
+      DIPLOMA: 'Diploma',
+      PUC: 'PUC',
+      SCHOOL: 'School'
+    }
+    return labels[type] || type
+  }
+
+  if (isLoading) {
+    return (
+      <div className="w-full p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="w-full p-6 space-y-6">
@@ -265,11 +386,11 @@ export default function CoursesPage() {
                     </SheetHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Course Full Name</Label>
+                            <Label htmlFor="title">Course Title</Label>
                             <Input 
-                                id="name" 
-                                value={formData.name} 
-                                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                                id="title" 
+                                value={formData.title} 
+                                onChange={(e) => setFormData({...formData, title: e.target.value})} 
                                 placeholder="Bachelor of Science in..." 
                             />
                         </div>
@@ -285,31 +406,40 @@ export default function CoursesPage() {
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="type">Type</Label>
-                                <Select value={formData.type} onValueChange={(val) => setFormData({...formData, type: val as any})}>
+                                <Select value={formData.type} onValueChange={(val) => setFormData({...formData, type: val as CourseType})}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Undergraduate">Undergraduate</SelectItem>
-                                        <SelectItem value="Postgraduate">Postgraduate</SelectItem>
-                                        <SelectItem value="Diploma">Diploma</SelectItem>
-                                        <SelectItem value="Certificate">Certificate</SelectItem>
+                                        <SelectItem value="UNDERGRADUATE">Undergraduate</SelectItem>
+                                        <SelectItem value="POSTGRADUATE">Postgraduate</SelectItem>
+                                        <SelectItem value="DIPLOMA">Diploma</SelectItem>
+                                        <SelectItem value="PUC">PUC</SelectItem>
+                                        <SelectItem value="SCHOOL">School</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
                         <div className="grid gap-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Textarea 
+                                id="description" 
+                                value={formData.description} 
+                                onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                                placeholder="Course description..." 
+                                rows={3}
+                            />
+                        </div>
+                        <div className="grid gap-2">
                             <Label htmlFor="department">Department</Label>
-                             <Select value={formData.department} onValueChange={(val) => setFormData({...formData, department: val})}>
+                             <Select value={formData.departmentId} onValueChange={(val) => setFormData({...formData, departmentId: val})}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Assign Department" />
+                                    <SelectValue placeholder="Select Department" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Computer Science">Computer Science</SelectItem>
-                                    <SelectItem value="Management">Management</SelectItem>
-                                    <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
-                                    <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
-                                    <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                                    {departments.map(dept => (
+                                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -337,14 +467,48 @@ export default function CoursesPage() {
                                     type="number"
                                     min={1}
                                     max={12}
-                                    value={formData.semesters} 
-                                    onChange={(e) => setFormData({...formData, semesters: parseInt(e.target.value) || 0})} 
+                                    value={formData.totalSemesters} 
+                                    onChange={(e) => setFormData({...formData, totalSemesters: parseInt(e.target.value) || 0})} 
                                 />
                             </div>
                         </div>
-
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="credits">Credits</Label>
+                                <Input 
+                                    id="credits" 
+                                    type="number"
+                                    min={0}
+                                    value={formData.credits} 
+                                    onChange={(e) => setFormData({...formData, credits: parseInt(e.target.value) || 0})} 
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="maxEnrollment">Max Enrollment</Label>
+                                <Input 
+                                    id="maxEnrollment" 
+                                    type="number"
+                                    min={1}
+                                    value={formData.maxEnrollment} 
+                                    onChange={(e) => setFormData({...formData, maxEnrollment: parseInt(e.target.value) || 0})} 
+                                />
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="status">Status</Label>
+                            <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val as 'ACTIVE' | 'INACTIVE'})}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ACTIVE">Active</SelectItem>
+                                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         
-                        <Button className="mt-4" onClick={handleSave}>
+                        <Button className="mt-4" onClick={handleSave} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {currentCourse ? 'Save Changes' : 'Create Course'}
                         </Button>
                     </div>
@@ -356,21 +520,25 @@ export default function CoursesPage() {
         <div className="relative flex-1 max-w-sm">
              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-            placeholder="Search courses..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-                table.getColumn("name")?.setFilterValue(event.target.value)
-            }
-            className="pl-8"
+              placeholder="Search courses..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setCurrentPage(0)
+              }}
+              className="pl-8"
             />
         </div>
 
         <div className="flex items-center gap-2">
              <Select 
-                 value={(table.getColumn("type")?.getFilterValue() as string) ?? "all"}
-                 onValueChange={(val) => table.getColumn("type")?.setFilterValue(val === "all" ? "" : val)}
+                 value={typeFilter}
+                 onValueChange={(val) => {
+                   setTypeFilter(val)
+                   setCurrentPage(0)
+                 }}
              >
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[160px]">
                     <div className="flex items-center gap-2">
                         <Filter className="h-4 w-4" />
                         <SelectValue placeholder="Type" />
@@ -378,9 +546,11 @@ export default function CoursesPage() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Undergraduate">Undergraduate</SelectItem>
-                    <SelectItem value="Postgraduate">Postgraduate</SelectItem>
-                    <SelectItem value="Diploma">Diploma</SelectItem>
+                    <SelectItem value="UNDERGRADUATE">Undergraduate</SelectItem>
+                    <SelectItem value="POSTGRADUATE">Postgraduate</SelectItem>
+                    <SelectItem value="DIPLOMA">Diploma</SelectItem>
+                    <SelectItem value="PUC">PUC</SelectItem>
+                    <SelectItem value="SCHOOL">School</SelectItem>
                 </SelectContent>
              </Select>
 
@@ -391,23 +561,18 @@ export default function CoursesPage() {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    {table
-                    .getAllColumns()
-                    .filter((column) => column.getCanHide())
-                    .map((column) => {
-                        return (
-                        <DropdownMenuCheckboxItem
-                            key={column.id}
-                            className="capitalize"
-                            checked={column.getIsVisible()}
-                            onCheckedChange={(value) =>
-                            column.toggleVisibility(!!value)
-                            }
-                        >
-                            {column.id}
-                        </DropdownMenuCheckboxItem>
-                        )
-                    })}
+                    {Object.entries(visibleColumns).filter(([key]) => key !== 'actions').map(([key, visible]) => (
+                      <DropdownMenuCheckboxItem
+                          key={key}
+                          className="capitalize"
+                          checked={visible}
+                          onCheckedChange={(value) =>
+                            setVisibleColumns(prev => ({ ...prev, [key]: !!value }))
+                          }
+                      >
+                          {key === 'totalSemesters' ? 'Semesters' : key}
+                      </DropdownMenuCheckboxItem>
+                    ))}
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
@@ -415,68 +580,123 @@ export default function CoursesPage() {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
+            <TableRow>
+              {visibleColumns.title && (
+                <TableHead>
+                  <Button variant="ghost" onClick={() => handleSort('title')}>
+                    Course Title <SortIcon columnKey="title" />
+                  </Button>
+                </TableHead>
+              )}
+              {visibleColumns.code && <TableHead>Code</TableHead>}
+              {visibleColumns.type && <TableHead>Type</TableHead>}
+              {visibleColumns.department && (
+                <TableHead>
+                  <Button variant="ghost" onClick={() => handleSort('departmentName')}>
+                    Department <SortIcon columnKey="departmentName" />
+                  </Button>
+                </TableHead>
+              )}
+              {visibleColumns.duration && <TableHead>Duration</TableHead>}
+              {visibleColumns.totalSemesters && <TableHead>Semesters</TableHead>}
+              {visibleColumns.status && <TableHead>Status</TableHead>}
+              {visibleColumns.actions && <TableHead className="w-[50px]"></TableHead>}
+            </TableRow>
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+            {paginatedCourses.length > 0 ? (
+              paginatedCourses.map((course) => (
+                <TableRow key={course.id}>
+                  {visibleColumns.title && (
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        {course.title}
+                      </div>
                     </TableCell>
-                  ))}
+                  )}
+                  {visibleColumns.code && (
+                    <TableCell>
+                      <Badge variant="outline">{course.code}</Badge>
+                    </TableCell>
+                  )}
+                  {visibleColumns.type && (
+                    <TableCell>{getTypeLabel(course.type)}</TableCell>
+                  )}
+                  {visibleColumns.department && (
+                    <TableCell>{course.department?.name || '-'}</TableCell>
+                  )}
+                  {visibleColumns.duration && (
+                    <TableCell>{course.duration}</TableCell>
+                  )}
+                  {visibleColumns.totalSemesters && (
+                    <TableCell className="text-center">{course.totalSemesters}</TableCell>
+                  )}
+                  {visibleColumns.status && (
+                    <TableCell>
+                      <Badge variant={course.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                        {course.status}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  {visibleColumns.actions && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleEdit(course)}>
+                            <FileEdit className="mr-2 h-4 w-4" /> Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive" 
+                            onClick={() => handleDelete(course.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete Course
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={Object.values(visibleColumns).filter(Boolean).length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No courses found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+      <div className="flex items-center justify-between py-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {paginatedCourses.length} of {filteredAndSortedCourses.length} course(s)
+        </div>
         <div className="space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => setCurrentPage(p => p - 1)}
+            disabled={!canPreviousPage}
           >
             Previous
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => setCurrentPage(p => p + 1)}
+            disabled={!canNextPage}
           >
             Next
           </Button>
@@ -485,3 +705,4 @@ export default function CoursesPage() {
     </div>
   )
 }
+

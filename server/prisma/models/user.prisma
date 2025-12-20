@@ -87,6 +87,10 @@ model User {
   createdById               String?
   updatedById               String?
 
+  // Department relation
+  departmentId              String?
+  department                Department?  @relation(fields: [departmentId], references: [id])
+
   // ---------------------------
   // RELATIONS
   // ---------------------------
@@ -100,7 +104,7 @@ model User {
 
   // Forgot password requests processed by admin
   processedPasswordRequests ForgotPasswordRequest[] @relation("ProcessedByAdmin")
-
+  courses                   StudentCourse[]
   fcmDeliveryStatuses       FcmDeliveryStatus[]
 
   @@index([email])
@@ -108,6 +112,7 @@ model User {
   @@index([role])
   @@index([isActive])
   @@index([isVerified])
+  @@index([departmentId])
 }
 
 // ===========================

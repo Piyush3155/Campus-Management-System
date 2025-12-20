@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { Mail, Lock, Loader2, User, GraduationCap, Shield, Briefcase } from "lucide-react";
+import { Mail, Lock, Loader2, GraduationCap, Shield, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 
 type LoginMode = "student" | "staff";
@@ -20,31 +20,27 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
   const router = useRouter();
   const { isAuthenticated, loginCredentials, loginGoogle, user, loading: authLoading } = useAuth();
 
   // Redirect based on role if already authenticated
   useEffect(() => {
-    if (!authLoading && isAuthenticated && user) {
-      redirectToDashboard(user.role);
+    if (!authLoading && isAuthenticated && user && !justLoggedIn) {
+      const roleRedirects = {
+        ADMIN: '/admin-dashboard',
+        STAFF: '/staff/dashboard',
+        STUDENT: '/student/dashboard'
+      };
+      const redirectUrl = roleRedirects[user.role as keyof typeof roleRedirects] || '/admin-dashboard';
+      router.push(redirectUrl);
     }
-  }, [isAuthenticated, user, authLoading]);
-
-  const redirectToDashboard = (role: string) => {
-    switch (role) {
-      case "ADMIN":
-        router.push("/admin-dashboard");
-        break;
-      case "STAFF":
-        router.push("/staff");
-        break;
-      case "STUDENT":
-        router.push("/student");
-        break;
-      default:
-        router.push("/");
+    // Reset the flag after a short delay
+    if (justLoggedIn) {
+      const timer = setTimeout(() => setJustLoggedIn(false), 1000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [isAuthenticated, user, authLoading, justLoggedIn, router]);
 
   /**
    * Handle Staff/Admin Login with credentials
@@ -59,9 +55,10 @@ function LoginContent() {
     try {
       const result = await loginCredentials(email, password);
       
-      if (result.success) {
+      if (result.success && result.redirectUrl) {
         toast.success("Logged in successfully");
-        // Redirect will happen via useEffect
+        setJustLoggedIn(true);
+        router.push(result.redirectUrl);
       } else {
         toast.error(result.error || "Invalid credentials");
       }
@@ -93,9 +90,10 @@ function LoginContent() {
       // Step 2: Authenticate with backend
       const result = await loginGoogle();
       
-      if (result.success) {
+      if (result.success && result.redirectUrl) {
         toast.success("Logged in successfully");
-        // Redirect will happen via useEffect
+        setJustLoggedIn(true);
+        router.push(result.redirectUrl);
       } else {
         toast.error(result.error || "Authentication failed");
       }

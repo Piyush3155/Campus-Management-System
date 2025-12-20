@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -18,6 +20,20 @@ export class UsersController {
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/status')
+  async updateStatus(@Param('id') id: string, @Body() body: { isActive: boolean }) {
+    return this.usersService.setActiveStatus(id, body.isActive);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Delete(':id')
+  async deleteUser(@Param('id') id: string) {
+    return this.usersService.deleteUser(id);
   }
 
   @UseGuards(JwtAuthGuard)

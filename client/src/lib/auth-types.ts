@@ -14,6 +14,7 @@ export interface AuthUser {
  * Auth response from backend
  */
 export interface AuthResponse {
+  token: string;
   access_token: string;
   user: AuthUser;
 }

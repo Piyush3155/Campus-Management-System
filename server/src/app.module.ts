@@ -4,8 +4,10 @@ import { AppService } from './app.service';
 import { FcmModule } from './fcm/fcm.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SetupModule } from './setup/setup.module';
+import { CourseModule } from './course/course.module';
 @Module({
-  imports: [FcmModule, AuthModule, PrismaModule],
+  imports: [FcmModule, AuthModule, PrismaModule, SetupModule, CourseModule],
   controllers: [AppController],
   providers: [AppService],
 })
