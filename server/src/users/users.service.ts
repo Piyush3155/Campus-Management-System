@@ -5,10 +5,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(page: number = 1, limit: number = 10) {
+  async findAll(page: number = 1, limit: number = 10, role?: string) {
     const skip = (page - 1) * limit;
+    const where = role ? { role: role.toUpperCase() as any } : {};
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
+        where,
         select: {
           id: true,
           name: true,
@@ -27,7 +29,7 @@ export class UsersService {
         skip,
         take: limit,
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({ where }),
     ]);
 
     return {
@@ -38,6 +40,27 @@ export class UsersService {
         total,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async getStaffStats() {
+    const [totalStaff, activeStaff, inactiveStaff, departments] = await Promise.all([
+      this.prisma.user.count({ where: { role: 'STAFF' } }),
+      this.prisma.user.count({ where: { role: 'STAFF', isActive: true } }),
+      this.prisma.user.count({ where: { role: 'STAFF', isActive: false } }),
+      this.prisma.department.count({ where: { status: 'ACTIVE' } }),
+    ]);
+
+    // For now, we'll use placeholder values for workload
+    // This would need additional models/tables in a real implementation
+    const avgWorkload = 18; // Placeholder in hours
+
+    return {
+      totalStaff,
+      activeStaff,
+      inactiveStaff,
+      departments,
+      avgWorkload,
     };
   }
 

@@ -6,8 +6,9 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SetupModule } from './setup/setup.module';
 import { CourseModule } from './course/course.module';
+import { ProfileModule } from './profile/profile.module';
 @Module({
-  imports: [FcmModule, AuthModule, PrismaModule, SetupModule, CourseModule],
+  imports: [FcmModule, AuthModule, PrismaModule, SetupModule, CourseModule, ProfileModule],
   controllers: [AppController],
   providers: [AppService],
 })

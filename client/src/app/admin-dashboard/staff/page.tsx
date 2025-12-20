@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   MoreHorizontal,
   Plus,
@@ -44,51 +45,48 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
-
-const staffData = [
-  {
-    id: "STF001",
-    name: "Dr. Sarah Wilson",
-    role: "Professor",
-    department: "Computer Science",
-    email: "sarah.w@university.edu",
-    status: "Active",
-    workload: "18 hrs/week",
-    image: "/avatars/01.png"
-  },
-  {
-    id: "STF002",
-    name: "Prof. James Carter",
-    role: "HOD",
-    department: "Mathematics",
-    email: "james.c@university.edu",
-    status: "Active",
-    workload: "12 hrs/week",
-    image: "/avatars/02.png"
-  },
-  {
-    id: "STF003",
-    name: "Emily Chen",
-    role: "Lecturer",
-    department: "Physics",
-    email: "emily.c@university.edu",
-    status: "Leave",
-    workload: "20 hrs/week",
-    image: "/avatars/03.png"
-  },
-  {
-    id: "STF004",
-    name: "Michael Brown",
-    role: "Lab Assistant",
-    department: "Chemistry",
-    email: "michael.b@university.edu",
-    status: "Active",
-    workload: "25 hrs/week",
-    image: "/avatars/04.png"
-  }
-]
+import { fetchStaff, fetchStaffStats, type UsersResponse, type StaffStats } from "@/app/actions/user/main"
 
 export default function StaffPage() {
+  const [staffData, setStaffData] = useState<UsersResponse['users']>([])
+  const [stats, setStats] = useState<StaffStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      const [staffResult, statsResult] = await Promise.all([
+        fetchStaff(),
+        fetchStaffStats()
+      ])
+
+      if (staffResult.success && staffResult.data) {
+        setStaffData(staffResult.data.users)
+      } else {
+        setError(staffResult.error || 'Failed to load staff')
+      }
+
+      if (statsResult.success && statsResult.data) {
+        setStats(statsResult.data)
+      } else {
+        // Don't set error for stats failure, just use null
+        console.error('Failed to load stats:', statsResult.error)
+      }
+
+      setLoading(false)
+    }
+    loadData()
+  }, [])
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading staff...</div>
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center h-64 text-red-500">Error: {error}</div>
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
@@ -115,9 +113,9 @@ export default function StaffPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">142</div>
+            <div className="text-2xl font-bold">{stats?.totalStaff || 0}</div>
             <p className="text-xs text-muted-foreground">
-              +4 from last month
+              {stats?.activeStaff || 0} active staff
             </p>
           </CardContent>
         </Card>
@@ -129,7 +127,7 @@ export default function StaffPage() {
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{stats?.departments || 0}</div>
             <p className="text-xs text-muted-foreground">
               Active departments
             </p>
@@ -143,7 +141,7 @@ export default function StaffPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{stats?.inactiveStaff || 0}</div>
             <p className="text-xs text-muted-foreground">
               Currently away
             </p>
@@ -157,7 +155,7 @@ export default function StaffPage() {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">18h</div>
+            <div className="text-2xl font-bold">{stats?.avgWorkload || 0}h</div>
             <p className="text-xs text-muted-foreground">
               Per week average
             </p>
@@ -191,7 +189,7 @@ export default function StaffPage() {
                                 <TableHead className="w-[80px]">Image</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Role</TableHead>
-                                <TableHead>Department</TableHead>
+                                <TableHead>Email</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -201,21 +199,21 @@ export default function StaffPage() {
                                 <TableRow key={staff.id}>
                                     <TableCell>
                                         <Avatar className="h-9 w-9">
-                                            <AvatarImage src={staff.image} alt={staff.name} />
+                                            <AvatarImage src={staff.profileImageUrl || "/avatars/default.png"} alt={staff.name} />
                                             <AvatarFallback>{staff.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                                         </Avatar>
                                     </TableCell>
                                     <TableCell className="font-medium">
                                         <div className="flex flex-col">
                                             <span>{staff.name}</span>
-                                            <span className="text-xs text-muted-foreground">{staff.email}</span>
+                                            <span className="text-xs text-muted-foreground">{staff.username || staff.email}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>{staff.role}</TableCell>
-                                    <TableCell>{staff.department}</TableCell>
+                                    <TableCell>{staff.email}</TableCell>
                                     <TableCell>
-                                        <Badge variant={staff.status === "Active" ? "default" : "secondary"}>
-                                            {staff.status}
+                                        <Badge variant={staff.isActive ? "default" : "secondary"}>
+                                            {staff.isActive ? "Active" : "Inactive"}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -285,9 +283,8 @@ export default function StaffPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Staff Name</TableHead>
-                                <TableHead>Department</TableHead>
-                                <TableHead>Assigned Subjects</TableHead>
-                                <TableHead>Weekly Hours</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Email</TableHead>
                                 <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -295,10 +292,9 @@ export default function StaffPage() {
                              {staffData.map(staff => (
                                  <TableRow key={staff.id}>
                                      <TableCell className="font-medium">{staff.name}</TableCell>
-                                     <TableCell>{staff.department}</TableCell>
-                                     <TableCell>3</TableCell>
-                                     <TableCell>{staff.workload}</TableCell>
-                                     <TableCell><Badge variant="outline">Optimal</Badge></TableCell>
+                                     <TableCell>{staff.role}</TableCell>
+                                     <TableCell>{staff.email}</TableCell>
+                                     <TableCell><Badge variant={staff.isActive ? "default" : "secondary"}>{staff.isActive ? "Active" : "Inactive"}</Badge></TableCell>
                                  </TableRow>
                              ))}
                         </TableBody>

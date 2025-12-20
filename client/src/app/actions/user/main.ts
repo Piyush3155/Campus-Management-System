@@ -2,10 +2,11 @@
 
 import { secureApiClient } from '@/lib/secure-api';
 import type { ActionResult } from '@/lib/auth-types';
-import type { User, UsersResponse, CreateStaffData } from './types';
+import type { User, UsersResponse, CreateStaffData, StaffStats } from './types';
 
 // Re-export types for convenience
 export type { User, UsersResponse, CreateStaffData } from './types';
+export type { StaffStats } from './types';
 
 /**
  * Fetch users with pagination
@@ -30,6 +31,60 @@ export async function fetchUsers(page: number = 1, limit: number = 10): Promise<
     return {
       success: false,
       error: 'Failed to fetch users',
+    };
+  }
+}
+
+/**
+ * Fetch staff members with pagination
+ */
+export async function fetchStaff(page: number = 1, limit: number = 10): Promise<ActionResult<UsersResponse>> {
+  try {
+    const response = await secureApiClient.get<UsersResponse>(`/users?page=${page}&limit=${limit}&role=staff`);
+
+    if (response.error) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    return {
+      success: true,
+      data: response.data!,
+    };
+  } catch (error) {
+    console.error('Fetch staff error:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch staff',
+    };
+  }
+}
+
+/**
+ * Fetch staff statistics
+ */
+export async function fetchStaffStats(): Promise<ActionResult<StaffStats>> {
+  try {
+    const response = await secureApiClient.get<StaffStats>('/users/stats');
+
+    if (response.error) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    return {
+      success: true,
+      data: response.data!,
+    };
+  } catch (error) {
+    console.error('Fetch staff stats error:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch staff stats',
     };
   }
 }

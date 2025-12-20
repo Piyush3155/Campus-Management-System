@@ -23,6 +23,14 @@ export interface UsersResponse {
   };
 }
 
+export interface StaffStats {
+  totalStaff: number;
+  activeStaff: number;
+  inactiveStaff: number;
+  departments: number;
+  avgWorkload: number;
+}
+
 export interface CreateStaffData {
   name: string;
   username: string;

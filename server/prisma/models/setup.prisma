@@ -57,10 +57,11 @@ model StudentCourse {
   course    Course   @relation(fields: [courseId], references: [id])
 
   createdAt DateTime @default(now())
-
+  
   @@unique([studentId, courseId])
   @@index([studentId])
   @@index([courseId])
+  profiles Profile[]
 }
 
 

@@ -47,9 +47,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
 
+    // ...existing code...
+
     if (pathname.startsWith('/student') && !session.roles?.includes('STUDENT')) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
+
+// ...existing code...
 
     // Handle dashboard redirects
     if (pathname.startsWith('/dashboard')) {

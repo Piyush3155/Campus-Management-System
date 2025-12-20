@@ -106,13 +106,36 @@ model User {
   processedPasswordRequests ForgotPasswordRequest[] @relation("ProcessedByAdmin")
   courses                   StudentCourse[]
   fcmDeliveryStatuses       FcmDeliveryStatus[]
-
+  profile                   Profile?
   @@index([email])
   @@index([username])
   @@index([role])
   @@index([isActive])
   @@index([isVerified])
   @@index([departmentId])
+}
+
+model Profile{
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  bio       String?
+  location  String?
+  regno     String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gender    Gender?
+  address   String?
+  DOB       DateTime?
+  course    StudentCourse[]
+  couseid   String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
 }
 
 // ===========================
@@ -125,7 +148,7 @@ model Role {
   description String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-
+  
   userRoles   UserRole[]
 }
 
@@ -136,7 +159,7 @@ model UserRole {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
+  
   @@unique([userId, roleId])
 }
 

@@ -10,10 +10,16 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '10') {
+  async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '10', @Query('role') role?: string) {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
-    return this.usersService.findAll(pageNum, limitNum);
+    return this.usersService.findAll(pageNum, limitNum, role);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('stats')
+  async getStats() {
+    return this.usersService.getStaffStats();
   }
 
   @UseGuards(JwtAuthGuard)
