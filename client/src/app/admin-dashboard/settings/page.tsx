@@ -101,7 +101,7 @@ export default function SettingsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>General Information</CardTitle>
-                    <CardDescription>Update your institute's details and branding.</CardDescription>
+                    <CardDescription>Update your institute&apos;s details and branding.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="flex items-center gap-6">

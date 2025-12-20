@@ -1,8 +1,6 @@
 "use client"
 
-import * as React from "react"
 import {
-  Calendar as CalendarIcon,
   Mail,
   Phone,
   MapPin,

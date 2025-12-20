@@ -1,13 +1,10 @@
 "use client"
 
-import * as React from "react"
 import {
   MoreHorizontal,
   Plus,
   Search,
   Filter,
-  Mail,
-  Phone,
   Briefcase,
   Users,
   GraduationCap

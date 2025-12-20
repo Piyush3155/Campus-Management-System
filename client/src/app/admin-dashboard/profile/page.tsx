@@ -2,23 +2,18 @@
 
 import { useState } from "react"
 import { useAuth } from "@/context/AuthContext"
-import { updateProfile, updatePassword } from "firebase/auth"
-import { auth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
-import { Loader2, User, Key, Shield, LogOut } from "lucide-react"
+import { Loader2, Shield, Mail, User as UserIcon, Badge } from "lucide-react"
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth()
-  const [displayName, setDisplayName] = useState(user?.displayName || "")
-  const [photoURL, setPhotoURL] = useState(user?.photoURL || "")
+  const { user, loading, isAdmin, isStaff, isStudent, logout } = useAuth()
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
 
   if (loading) {
@@ -29,42 +24,43 @@ export default function ProfilePage() {
     return <div className="flex h-full items-center justify-center">Please log in to view profile.</div>
   }
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsUpdatingProfile(true)
-    try {
-      if (auth.currentUser) {
-          await updateProfile(auth.currentUser, {
-              displayName: displayName,
-              photoURL: photoURL
-          })
-          toast.success("Profile updated successfully")
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update profile")
-    } finally {
-      setIsUpdatingProfile(false)
-    }
-  }
-
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match")
       return
     }
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters")
+      return
+    }
     setIsUpdatingPassword(true)
     try {
-        if (auth.currentUser) {
-            await updatePassword(auth.currentUser, newPassword)
-            toast.success("Password updated successfully")
-            setNewPassword("")
-            setConfirmPassword("")
-        }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update password")
+      // TODO: Implement password change API call
+      toast.info("Password change feature coming soon")
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update password"
+      toast.error(message)
     } finally {
       setIsUpdatingPassword(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    await logout()
+    window.location.href = "/login"
+  }
+
+  const getRoleBadgeColor = () => {
+    switch (user.role) {
+      case "ADMIN":
+        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+      case "STAFF":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+      case "STUDENT":
+        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+      default:
+        return "bg-gray-100 text-gray-700"
     }
   }
 
@@ -74,7 +70,7 @@ export default function ProfilePage() {
           <div className="space-y-1">
             <h2 className="text-2xl font-semibold tracking-tight">Profile & Account</h2>
             <p className="text-sm text-muted-foreground">
-              Manage your personal information and security settings.
+              View your account information and security settings.
             </p>
           </div>
       </div>
@@ -84,55 +80,68 @@ export default function ProfilePage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Update your display name and profile photo.</CardDescription>
+            <CardDescription>Your account details and role.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleUpdateProfile} className="space-y-6">
+            <div className="space-y-6">
               <div className="flex items-center gap-6">
-                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={photoURL || user.photoURL || ""} />
-                  <AvatarFallback>{user.displayName?.charAt(0) || "U"}</AvatarFallback>
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={user.firebaseUser?.photoURL || ""} />
+                  <AvatarFallback className="text-2xl">
+                    {user.name?.charAt(0).toUpperCase() || "U"}
+                  </AvatarFallback>
                 </Avatar>
-                <div className="space-y-1">
-                   <h3 className="font-medium">{user.email}</h3>
-                   <p className="text-xs text-muted-foreground">User ID: {user.uid}</p>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">{user.name}</h3>
+                  <div className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${getRoleBadgeColor()}`}>
+                    <Badge className="h-3 w-3" />
+                    {user.role}
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input 
-                  id="displayName" 
-                  value={displayName} 
-                  onChange={(e) => setDisplayName(e.target.value)} 
-                  placeholder="Enter your name" 
-                />
-              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </Label>
+                  <p className="font-medium">{user.email}</p>
+                </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="photoURL">Photo URL</Label>
-                <Input 
-                  id="photoURL" 
-                  value={photoURL} 
-                  onChange={(e) => setPhotoURL(e.target.value)} 
-                  placeholder="https://example.com/avatar.jpg" 
-                />
+                {user.username && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <UserIcon className="h-4 w-4" />
+                      Username
+                    </Label>
+                    <p className="font-medium">{user.username}</p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">User ID</Label>
+                  <p className="font-mono text-sm text-muted-foreground">{user.id}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Account Status</Label>
+                  <p className={`font-medium ${user.isActive ? "text-green-600" : "text-red-600"}`}>
+                    {user.isActive ? "Active" : "Inactive"}
+                  </p>
+                </div>
               </div>
-              
-              <Button type="submit" disabled={isUpdatingProfile}>
-                {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </form>
+            </div>
           </CardContent>
         </Card>
 
         <div className="space-y-4">
-             {/* Security Card */}
+          {/* Password Change - Only for Admin/Staff */}
+          {(isAdmin || isStaff) && (
             <Card>
               <CardHeader>
-                <CardTitle>Security</CardTitle>
-                <CardDescription>Change your password.</CardDescription>
+                <CardTitle>Change Password</CardTitle>
+                <CardDescription>Update your account password.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleUpdatePassword} className="space-y-4">
@@ -143,6 +152,7 @@ export default function ProfilePage() {
                       type="password"
                       value={newPassword} 
                       onChange={(e) => setNewPassword(e.target.value)} 
+                      placeholder="Enter new password"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -152,6 +162,7 @@ export default function ProfilePage() {
                       type="password"
                       value={confirmPassword} 
                       onChange={(e) => setConfirmPassword(e.target.value)} 
+                      placeholder="Confirm new password"
                     />
                   </div>
                   <Button type="submit" disabled={isUpdatingPassword} variant="outline" className="w-full">
@@ -161,32 +172,38 @@ export default function ProfilePage() {
                 </form>
               </CardContent>
             </Card>
+          )}
 
-            {/* Session Info */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Account Status
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Last Sign In:</span>
-                        <span>{user.metadata.lastSignInTime ? new Date(user.metadata.lastSignInTime).toLocaleString() : 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Account Created:</span>
-                        <span>{user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleString() : 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Email Verified:</span>
-                        <span className={user.emailVerified ? "text-green-600 font-medium" : "text-yellow-600 font-medium"}>
-                            {user.emailVerified ? "Verified" : "Unverified"}
-                        </span>
-                    </div>
-                </CardContent>
-            </Card>
+          {/* Account Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Authentication Method
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Login Type:</span>
+                <span className="font-medium">
+                  {isStudent ? "Google (Firebase)" : "Email & Password"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Role:</span>
+                <span className="font-medium">{user.role}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Logout Button */}
+          <Button 
+            variant="destructive" 
+            className="w-full"
+            onClick={handleLogout}
+          >
+            Sign Out
+          </Button>
         </div>
       </div>
     </div>

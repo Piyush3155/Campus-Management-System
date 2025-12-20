@@ -213,9 +213,9 @@ export function AppSidebar({ role = "admin", ...props }: AppSidebarProps) {
   const { user } = useAuth();
 
   const sidebarUser = {
-    name: user?.displayName || "User",
+    name: user?.name || "User",
     email: user?.email || "user@example.com",
-    avatar: user?.photoURL || "",
+    avatar: user?.firebaseUser?.photoURL || "",
   };
 
   const navItems = role === "staff" ? staffNav : role === "student" ? studentNav : adminNav;

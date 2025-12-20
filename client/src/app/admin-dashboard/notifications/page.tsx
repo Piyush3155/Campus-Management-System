@@ -3,14 +3,10 @@
 import * as React from "react"
 import {
   Bell,
-  CheckCircle2,
   AlertTriangle,
   Info,
-  Clock,
   Shield,
   LogIn,
-  Search,
-  Filter,
   MoreVertical,
   Activity
 } from "lucide-react"
@@ -29,7 +25,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -65,7 +60,7 @@ const loginHistory = [
 ];
 
 export default function NotificationsPage() {
-    const [activeTab, setActiveTab] = React.useState("notifications");
+    const [, setActiveTab] = React.useState("notifications");
 
   return (
     <div className="flex flex-col gap-6 p-6">

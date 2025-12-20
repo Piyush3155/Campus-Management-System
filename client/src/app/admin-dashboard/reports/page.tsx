@@ -2,16 +2,11 @@
 
 import * as React from "react"
 import {
-  BarChart3,
   TrendingUp,
   Users,
   GraduationCap,
   CalendarDays,
-  Download,
-  Filter,
-  PieChart as PieChartIcon,
-  Activity
-} from "lucide-react"
+  Download} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -34,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import {
     BarChart,
     Bar,

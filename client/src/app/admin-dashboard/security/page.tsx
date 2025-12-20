@@ -1,18 +1,12 @@
 "use client"
 
-import * as React from "react"
 import {
   ShieldAlert,
   ShieldCheck,
-  Lock,
-  History,
   AlertTriangle,
-  UserX,
   KeyRound,
   Search,
-  Download,
-  Filter
-} from "lucide-react"
+  Download} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -45,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 // --- Mock Data ---
 
