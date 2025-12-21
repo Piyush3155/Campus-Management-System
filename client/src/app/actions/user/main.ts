@@ -2,11 +2,11 @@
 
 import { secureApiClient } from '@/lib/secure-api';
 import type { ActionResult } from '@/lib/auth-types';
-import type { User, UsersResponse, CreateStaffData, StaffStats } from './types';
+import type { User, UsersResponse, CreateStaffData, StaffStats, StaffWorkload, StaffSubject } from './types';
 
 // Re-export types for convenience
 export type { User, UsersResponse, CreateStaffData } from './types';
-export type { StaffStats } from './types';
+export type { StaffStats, StaffWorkload } from './types';
 
 /**
  * Fetch users with pagination
@@ -112,6 +112,84 @@ export async function createStaff(staffData: CreateStaffData): Promise<ActionRes
     return {
       success: false,
       error: 'Failed to create staff member',
+    };
+  }
+}
+
+/**
+ * Fetch a single user by ID
+ */
+export async function fetchUserById(userId: string): Promise<ActionResult<User>> {
+  try {
+    const response = await secureApiClient.get<User>(`/users/${userId}`);
+
+    if (response.error) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    return {
+      success: true,
+      data: response.data!,
+    };
+  } catch (error) {
+    console.error('Fetch user by ID error:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch user details',
+    };
+  }
+}
+
+/**
+ * Assign a subject to a staff member
+ */
+export async function assignSubjectToStaff(staffId: string, subjectId: string): Promise<ActionResult<StaffSubject>> {
+  try {
+    const response = await secureApiClient.post<StaffSubject>(`/staff/${staffId}/subjects`, { subjectId });
+
+    if (response.error) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    return {
+      success: true,
+      data: response.data!,
+    };
+  } catch (error) {
+    console.error('Assign subject error:', error);
+    return {
+      success: false,
+      error: 'Failed to assign subject',
+    };
+  }
+}
+
+export async function fetchStaffWorkload(): Promise<ActionResult<StaffWorkload[]>> {
+  try {
+    const response = await secureApiClient.get<StaffWorkload[]>('/users/workload');
+
+    if (response.error) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    return {
+      success: true,
+      data: response.data!,
+    };
+  } catch (error) {
+    console.error('Fetch workload error:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch staff workload',
     };
   }
 }

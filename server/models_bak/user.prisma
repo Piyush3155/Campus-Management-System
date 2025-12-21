@@ -105,6 +105,10 @@ model User {
   // Forgot password requests processed by admin
   processedPasswordRequests ForgotPasswordRequest[] @relation("ProcessedByAdmin")
   courses                   StudentCourse[]
+  staffSubjects             StaffSubject[]
+  timetables                TimeTable[]
+  departmentHOD             DepartmentHOD?
+
   fcmDeliveryStatuses       FcmDeliveryStatus[]
   profile                   Profile?
   @@index([email])
@@ -126,8 +130,6 @@ model Profile{
   gender    Gender?
   address   String?
   DOB       DateTime?
-  course    StudentCourse[]
-  couseid   String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 

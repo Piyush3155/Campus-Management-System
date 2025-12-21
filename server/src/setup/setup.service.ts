@@ -5,7 +5,7 @@ import { UpdateDepartmentDto } from './dto/update-department.dto';
 
 @Injectable()
 export class SetupService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // ==================== DEPARTMENT CRUD ====================
 
@@ -31,6 +31,24 @@ export class SetupService {
    */
   async findAllDepartments() {
     return this.prisma.department.findMany({
+      include: {
+        hod: {
+          include: {
+            staff: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            users: true,
+            subjects: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

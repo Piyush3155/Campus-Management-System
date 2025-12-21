@@ -1,230 +1,284 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, Calendar as CalendarIcon, Clock, Layers, MoreHorizontal, Trash2, Edit } from "lucide-react"
+import { Plus, Calendar as CalendarIcon, Clock, Layers, Edit, BookOpen, GraduationCap, Users } from "lucide-react"
+import { IconUsers } from "@tabler/icons-react"
 import { Calendar } from "@/components/ui/calendar"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { StaffAssignment } from "@/components/academic/staff-assignment"
+import { HodAssignment } from "@/components/academic/hod-assignment"
+import { TimetableManager } from "@/components/academic/timetable-manager"
+import { AcademicDirectory } from "@/components/academic/academic-directory"
+import { AcademicYear, AcademicEvent, Department } from "@/types/academic"
+import { getAcademicYears, getEvents, getDepartments } from "@/app/actions/acdemics/main"
 import { toast } from "sonner"
-
-// --- Mock Data ---
-const initialAcademicYears = [
-    { id: "1", name: "2024-2025", status: "Active", startDate: "2024-06-01", endDate: "2025-05-31" },
-    { id: "2", name: "2023-2024", status: "Past", startDate: "2023-06-01", endDate: "2024-05-31" },
-]
-
-const initialEvents = [
-    { id: "1", title: "Semester Orientation", date: new Date(2025, 5, 10), type: "Event" },
-    { id: "2", title: "Independence Day", date: new Date(2025, 7, 15), type: "Holiday" },
-    { id: "3", title: "Mid-Term Exams", date: new Date(2025, 9, 20), type: "Exam" },
-]
-
-const timeSlots = ["09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM"]
-const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-
-// Mock Timetable Data (simplified)
-const timetableData: any = {
-    "Monday": { "09:00 AM": { subject: "Mathematics", room: "101" }, "11:00 AM": { subject: "Physics", room: "Lab A" } },
-    "Tuesday": { "10:00 AM": { subject: "Chemistry", room: "102" }, "02:00 PM": { subject: "English", room: "201" } },
-    // ... other days
-}
+import { CreateAcademicYearDialog } from "@/components/academic/create-year-dialog"
+import { CreateEventDialog } from "@/components/academic/create-event-dialog"
+import { CreateSubjectDialog } from "@/components/academic/create-subject-dialog"
 
 export default function AcademicsPage() {
-  const [date, setDate] = useState<Date | undefined>(new Date())
-  
-  return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-           <h1 className="text-2xl font-bold tracking-tight">Academic Management</h1>
-           <p className="text-muted-foreground">Manage years, structures, timetables, and academic calendar.</p>
-        </div>
-      </div>
+    const [date, setDate] = useState<Date | undefined>(new Date())
 
-      <Tabs defaultValue="structure" className="space-y-4">
-        <TabsList>
-            <TabsTrigger value="structure" className="gap-2"><Layers className="h-4 w-4" /> Structure</TabsTrigger>
-            <TabsTrigger value="timetable" className="gap-2"><Clock className="h-4 w-4" /> Timetable</TabsTrigger>
-            <TabsTrigger value="calendar" className="gap-2"><CalendarIcon className="h-4 w-4" /> Calendar</TabsTrigger>
-        </TabsList>
+    // Data State
+    const [academicYears, setAcademicYears] = useState<AcademicYear[]>([])
+    const [events, setEvents] = useState<AcademicEvent[]>([])
+    const [departments, setDepartments] = useState<Department[]>([])
+    const [loading, setLoading] = useState<boolean>(true)
 
-        {/* --- Academic Structure Tab --- */}
-        <TabsContent value="structure" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <div className="space-y-1">
-                             <CardTitle>Academic Years</CardTitle>
-                             <CardDescription>Manage active and past academic sessions.</CardDescription>
-                        </div>
-                         <Button size="sm"><Plus className="h-4 w-4" /></Button>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Year</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {initialAcademicYears.map(year => (
-                                    <TableRow key={year.id}>
-                                        <TableCell className="font-medium">{year.name}</TableCell>
-                                        <TableCell><Badge variant={year.status === "Active" ? "default" : "secondary"}>{year.status}</Badge></TableCell>
-                                        <TableCell className="text-right">
-                                             <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-4 w-4" /></Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+    // Fetch Data
+    useEffect(() => {
+        async function loadData() {
+            try {
+                const [yearsData, eventsData, deptsData] = await Promise.all([
+                    getAcademicYears(),
+                    getEvents(),
+                    getDepartments()
+                ])
+                setAcademicYears(yearsData || [])
+                setEvents(eventsData || [])
+                setDepartments(deptsData || [])
+            } catch (error) {
+                toast.error("Failed to load academic data")
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadData()
+    }, [])
 
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                         <div className="space-y-1">
-                             <CardTitle>Semesters & Sections</CardTitle>
-                             <CardDescription>Define terms and class divisions.</CardDescription>
-                        </div>
-                        <Button size="sm" variant="outline"><Plus className="h-4 w-4" /></Button>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="rounded-md border p-4">
-                            <h3 className="font-medium mb-2">Active Semesters</h3>
-                            <div className="flex flex-wrap gap-2">
-                                <Badge variant="outline" className="px-3 py-1">Semester 1</Badge>
-                                <Badge variant="outline" className="px-3 py-1">Semester 3</Badge>
-                                <Badge variant="outline" className="px-3 py-1">Semester 5</Badge>
-                            </div>
-                        </div>
-                        <div className="rounded-md border p-4">
-                            <h3 className="font-medium mb-2">Divisions / Sections</h3>
-                            <div className="flex flex-wrap gap-2">
-                                <Badge variant="secondary" className="px-3 py-1">Class A</Badge>
-                                <Badge variant="secondary" className="px-3 py-1">Class B</Badge>
-                                <Badge variant="secondary" className="px-3 py-1">Morning Batch</Badge>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </TabsContent>
-
-        {/* --- Timetable Tab --- */}
-        <TabsContent value="timetable" className="space-y-4">
-             <div className="flex items-center gap-4 mb-4">
-                 <Select defaultValue="class-a">
-                     <SelectTrigger className="w-[180px]">
-                         <SelectValue placeholder="Select Class" />
-                     </SelectTrigger>
-                     <SelectContent>
-                         <SelectItem value="class-a">BCA - Sem 1 - A</SelectItem>
-                         <SelectItem value="class-b">BCA - Sem 1 - B</SelectItem>
-                     </SelectContent>
-                 </Select>
-                 <Button variant="outline">Faculty View</Button>
-                 <Button className="ml-auto"><Plus className="mr-2 h-4 w-4" /> Add Slot</Button>
-             </div>
-             <Card>
-                 <CardContent className="p-0 overflow-x-auto">
-                     <Table>
-                         <TableHeader>
-                             <TableRow>
-                                 <TableHead className="w-[100px]">Time / Day</TableHead>
-                                 {weekDays.map(day => <TableHead key={day} className="text-center">{day}</TableHead>)}
-                             </TableRow>
-                         </TableHeader>
-                         <TableBody>
-                             {timeSlots.map(time => (
-                                 <TableRow key={time}>
-                                     <TableCell className="font-medium text-xs whitespace-nowrap bg-muted/20">{time}</TableCell>
-                                     {weekDays.map(day => {
-                                         const entry = timetableData[day]?.[time];
-                                         return (
-                                             <TableCell key={`${day}-${time}`} className="text-center p-2 border-l">
-                                                 {entry ? (
-                                                     <div className="bg-primary/10 p-2 rounded-md text-sm border border-primary/20">
-                                                         <div className="font-bold text-primary">{entry.subject}</div>
-                                                         <div className="text-xs text-muted-foreground">Rm: {entry.room}</div>
-                                                     </div>
-                                                 ) : (
-                                                     <div className="h-10"></div>
-                                                 )}
-                                             </TableCell>
-                                         )
-                                     })}
-                                 </TableRow>
-                             ))}
-                         </TableBody>
-                     </Table>
-                 </CardContent>
-             </Card>
-        </TabsContent>
-
-         {/* --- Calendar Tab --- */}
-         <TabsContent value="calendar" className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-[1fr_300px]">
-                <Card className="p-4">
-                    <CardHeader>
-                        <CardTitle>Academic Calendar</CardTitle>
-                    </CardHeader>
-                    <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        className="rounded-md border w-fit"
-                    />
-                </Card>
-                
-                <div className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                             <CardTitle className="text-lg">Upcoming Events</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid gap-4">
-                             {initialEvents.map(event => (
-                                 <div key={event.id} className="flex items-start gap-4 p-3 border rounded-lg">
-                                     <div className="bg-muted p-2 rounded-md text-center min-w-[3rem]">
-                                        <div className="text-xs font-bold uppercase text-muted-foreground">{event.date.toLocaleString('default', { month: 'short' })}</div>
-                                        <div className="text-lg font-bold">{event.date.getDate()}</div>
-                                     </div>
-                                     <div>
-                                         <div className="font-medium">{event.title}</div>
-                                         <Badge variant="outline" className="mt-1 text-xs">{event.type}</Badge>
-                                     </div>
-                                 </div>
-                             ))}
-                             <Button variant="outline" className="w-full">View All Events</Button>
-                        </CardContent>
-                    </Card>
-                     <Button className="w-full"><Plus className="mr-2 h-4 w-4" /> Add Event</Button>
+    return (
+        <div className="flex flex-col gap-6 p-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Academic Operations</h1>
+                    <p className="text-muted-foreground">Manage institutional structure, scheduling, and faculty assignments.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                        <Users className="h-3 w-3" /> {departments.length} Departments
+                    </div>
                 </div>
             </div>
-         </TabsContent>
-      </Tabs>
-    </div>
-  )
+
+            <Tabs defaultValue="structure" className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="structure">Structure</TabsTrigger>
+                    <TabsTrigger value="timetable">Timetable</TabsTrigger>
+                    <TabsTrigger value="faculty">Assignments</TabsTrigger>
+                    <TabsTrigger value="directory">Directory</TabsTrigger>
+                    <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="structure" className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Departments</CardTitle>
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{departments.length}</div>
+                                <p className="text-xs text-muted-foreground">Active academic units</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Academic Years</CardTitle>
+                                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{academicYears.length}</div>
+                                <p className="text-xs text-muted-foreground">Terms configured</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-12 items-start">
+                        {/* Years Section */}
+                        <Card className="md:col-span-12 lg:col-span-7">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle>Academic Sessions</CardTitle>
+                                        <CardDescription>Track active and upcoming academic periods</CardDescription>
+                                    </div>
+                                    <CreateAcademicYearDialog />
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader className="bg-slate-50/30">
+                                        <TableRow className="hover:bg-transparent border-slate-100">
+                                            <TableHead className="pl-8 font-black text-[11px] uppercase tracking-widest text-slate-400">Term Label</TableHead>
+                                            <TableHead className="font-black text-[11px] uppercase tracking-widest text-slate-400">Duration</TableHead>
+                                            <TableHead className="font-black text-[11px] uppercase tracking-widest text-slate-400">System Status</TableHead>
+                                            <TableHead className="text-right pr-8 font-black text-[11px] uppercase tracking-widest text-slate-400">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {academicYears.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">No academic years configured.</TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            academicYears.map(year => (
+                                                <TableRow key={year.id}>
+                                                    <TableCell className="font-medium">{year.name}</TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">
+                                                        {new Date(year.startDate).toLocaleDateString()} - {new Date(year.endDate).toLocaleDateString()}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={year.status === "ACTIVE" ? "default" : "secondary"}>
+                                                            {year.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="sm">Edit</Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+
+                        {/* Dept/HOD Section */}
+                        <div className="md:col-span-12 lg:col-span-5 space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Departmental Heads</CardTitle>
+                                    <CardDescription>Academic leadership across units</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="divide-y">
+                                        {departments.length === 0 ? (
+                                            <div className="p-6 text-center text-muted-foreground italic">No departments found.</div>
+                                        ) : (
+                                            departments.map(dept => (
+                                                <div key={dept.id} className="flex items-center justify-between p-4">
+                                                    <div>
+                                                        <div className="font-medium">{dept.name}</div>
+                                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider">HOD</div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        {dept.hod?.staff?.name ? (
+                                                            <div className="text-sm font-semibold text-primary">{dept.hod.staff.name}</div>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-[9px] font-bold">VACANT</Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-primary/5 border-primary/10">
+                                <CardContent className="p-6 flex flex-col gap-4">
+                                    <div className="space-y-1">
+                                        <h3 className="text-lg font-bold flex items-center gap-2">
+                                            Subject Library
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">Manage institutional course modules.</p>
+                                    </div>
+                                    <CreateSubjectDialog />
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </TabsContent>
+
+                {/* --- Timetable Tab --- */}
+                <TabsContent value="timetable" className="m-0 border-none outline-none">
+                    <TimetableManager />
+                </TabsContent>
+
+                {/* --- Faculty & Subjects Tab --- */}
+                <TabsContent value="faculty" className="space-y-4">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-start">
+                        <div className="lg:col-span-2">
+                            <StaffAssignment />
+                        </div>
+                        <div className="lg:col-span-1">
+                            <HodAssignment />
+                        </div>
+                    </div>
+                </TabsContent>
+
+                {/* --- Directory Tab --- */}
+                <TabsContent value="directory" className="m-0 border-none outline-none">
+                    <AcademicDirectory />
+                </TabsContent>
+
+                {/* --- Calendar Tab --- */}
+                <TabsContent value="calendar" className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-12 items-start">
+                        <Card className="md:col-span-12 lg:col-span-8">
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                                    <CardTitle>Academic Timeline</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={setDate}
+                                    className="rounded-md border shadow w-full flex justify-center p-4"
+                                />
+                            </CardContent>
+                        </Card>
+
+                        <div className="md:col-span-12 lg:col-span-4 space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Upcoming Events</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {events.length === 0 ? (
+                                        <p className="text-center py-6 text-muted-foreground">No events found.</p>
+                                    ) : (
+                                        events.slice(0, 5).map(event => (
+                                            <div key={event.id} className="flex items-center gap-4">
+                                                <div className="bg-slate-100 p-2 rounded text-center min-w-[3rem]">
+                                                    <div className="text-[10px] font-bold text-muted-foreground uppercase">
+                                                        {new Date(event.date).toLocaleString('default', { month: 'short' })}
+                                                    </div>
+                                                    <div className="text-lg font-bold">
+                                                        {new Date(event.date).getDate()}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-sm">{event.title}</div>
+                                                    <Badge variant="outline" className="text-[9px] uppercase tracking-wider">
+                                                        {event.type}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                    <Button variant="outline" className="w-full">View All</Button>
+                                </CardContent>
+                            </Card>
+                            <CreateEventDialog />
+                        </div>
+                    </div>
+                </TabsContent>
+            </Tabs>
+        </div>
+    )
 }

@@ -8,6 +8,17 @@ export interface Department {
   createdAt: string;
   updatedAt: string;
   users?: DepartmentUser[];
+  hod?: {
+    id: string;
+    staff: {
+      id: string;
+      name: string;
+    };
+  } | null;
+  _count?: {
+    users: number;
+    subjects: number;
+  };
 }
 
 export interface DepartmentUser {

@@ -3,11 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
-  async findAll(page: number = 1, limit: number = 10, role?: string) {
+  async findAll(page: number = 1, limit: number = 10, role?: string, departmentId?: string) {
     const skip = (page - 1) * limit;
-    const where = role ? { role: role.toUpperCase() as any } : {};
+    const where: any = {};
+    if (role) where.role = role.toUpperCase();
+    if (departmentId) where.departmentId = departmentId;
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
@@ -22,6 +24,23 @@ export class UsersService {
           isVerified: true,
           createdAt: true,
           updatedAt: true,
+          department: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          staffSubjects: {
+            select: {
+              subject: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true
+                }
+              }
+            }
+          }
         },
         orderBy: {
           createdAt: 'desc',
@@ -67,18 +86,14 @@ export class UsersService {
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        username: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        isVerified: true,
-        profileImageUrl: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        profile: true,
+        department: true,
+        staffSubjects: {
+          include: {
+            subject: true,
+          },
+        },
       },
     });
   }
@@ -304,6 +319,53 @@ export class UsersService {
       // Re-throw other errors as bad requests
       throw new BadRequestException(err?.message || 'Failed to create user');
     }
+  }
+
+  async getStaffWorkload() {
+    const staffMembers = await this.prisma.user.findMany({
+      where: { role: 'STAFF' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        _count: {
+          select: {
+            staffSubjects: true,
+            timetables: true,
+          },
+        },
+        timetables: {
+          select: {
+            startTime: true,
+            endTime: true,
+          },
+        },
+      },
+    });
+
+    const result = staffMembers.map((staff) => {
+      let totalWeeklyHours = 0;
+      staff.timetables.forEach((entry) => {
+        const duration = (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60);
+        totalWeeklyHours += duration;
+      });
+
+      return {
+        id: staff.id,
+        name: staff.name,
+        email: staff.email,
+        role: staff.role,
+        isActive: staff.isActive,
+        subjectsCount: staff._count.staffSubjects,
+        weeklyClassesCount: staff._count.timetables,
+        weeklyHours: Math.round(totalWeeklyHours * 10) / 10,
+      };
+    });
+
+    console.log('Workload result:', JSON.stringify(result, null, 2));
+    return result;
   }
 }
 

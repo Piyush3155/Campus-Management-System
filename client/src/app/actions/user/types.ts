@@ -1,3 +1,29 @@
+export interface Department {
+  id: string;
+  name: string;
+}
+
+export interface Subject {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface StaffSubject {
+  id: string;
+  staffId: string;
+  subjectId: string;
+  subject: Subject;
+}
+
+export interface UserProfile {
+  id: string;
+  userId: string;
+  bio?: string;
+  location?: string;
+  regno?: string;
+}
+
 // User types matching backend
 export interface User {
   id: string;
@@ -11,6 +37,9 @@ export interface User {
   profileImageUrl?: string;
   createdAt: string;
   updatedAt: string;
+  profile?: UserProfile;
+  department?: Department;
+  staffSubjects?: StaffSubject[];
 }
 
 export interface UsersResponse {
@@ -35,6 +64,18 @@ export interface CreateStaffData {
   name: string;
   username: string;
   email: string;
-  password: string;
+  password?: string;
   phone?: string;
+  departmentId?: string;
+}
+
+export interface StaffWorkload {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  subjectsCount: number;
+  weeklyClassesCount: number;
+  weeklyHours: number;
 }

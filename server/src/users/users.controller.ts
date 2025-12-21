@@ -6,15 +6,21 @@ import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '10', @Query('role') role?: string) {
+  async findAll(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+    @Query('role') role?: string,
+    @Query('departmentId') departmentId?: string
+  ) {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
-    return this.usersService.findAll(pageNum, limitNum, role);
+    return this.usersService.findAll(pageNum, limitNum, role, departmentId);
   }
+
 
   @UseGuards(JwtAuthGuard)
   @Get('stats')
@@ -26,6 +32,17 @@ export class UsersController {
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('workload')
+  async getWorkload() {
+    return this.usersService.getStaffWorkload();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.usersService.findById(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

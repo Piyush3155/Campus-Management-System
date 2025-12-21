@@ -8,6 +8,9 @@ model Department {
     users     User[]
 
     courses Course[]
+    subjects Subject[]
+    timetables TimeTable[]
+    hod DepartmentHOD?
 }
 
 enum DepartmentStatus {
@@ -61,7 +64,6 @@ model StudentCourse {
   @@unique([studentId, courseId])
   @@index([studentId])
   @@index([courseId])
-  profiles Profile[]
 }
 
 
