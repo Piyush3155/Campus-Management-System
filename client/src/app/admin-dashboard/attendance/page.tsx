@@ -15,9 +15,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { fetchTodaySessions, fetchStudentAttendance } from "@/app/actions/attendance/main"
+import { fetchTodaySessions, fetchStudentAttendance, fetchSubjectAttendanceReport, fetchStaffAttendanceReport } from "@/app/actions/attendance/main"
 import { fetchStaff } from "@/app/actions/user/main"
-import { fetchSubjectsByDepartment } from "@/app/actions/subject/main"
+import { fetchSubjectsByDepartment, fetchSubjects } from "@/app/actions/subject/main"
 import { toast } from "sonner"
 import { secureApiClient } from "@/lib/secure-api" // We'll use this through actions mostly
 
@@ -34,24 +34,24 @@ export default function AdminAttendancePage() {
         loadInitialData()
     }, [])
 
-    const loadInitialData = async () => {
+
+
+    const handleStaffChange = async (staffId: string) => {
+        setSelectedStaffId(staffId)
         setLoading(true)
-        const staffRes = await fetchStaff(1, 100)
-        if (staffRes.success && staffRes.data) {
-            setStaffList(staffRes.data.users)
+        const res = await fetchStaffAttendanceReport(staffId)
+        if (res.success && res.data) {
+            setStaffReport(res.data)
+        } else {
+            toast.error(res.error || "Failed to load staff report")
         }
-
-        // For subjects, we might need a department first. 
-        // For simplicity in this overview, let's assume we can fetch all or search.
-        // Given the API fetchSubjectsByDepartment, let's just use a placeholder for now or fetch for a default dept.
-
         setLoading(false)
     }
 
     const handleSubjectChange = async (subjectId: string) => {
         setSelectedSubjectId(subjectId)
         setLoading(true)
-        const { fetchSubjectAttendanceReport } = await import("@/app/actions/attendance/main")
+        // const { fetchSubjectAttendanceReport } = await import("@/app/actions/attendance/main") // Imported at top now
         const res = await fetchSubjectAttendanceReport(subjectId)
         if (res.success && res.data) {
             setSubjectReport(res.data)
