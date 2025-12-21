@@ -1,32 +1,26 @@
-"use server";
+"use server"
 
-import { secureApiClient } from '@/lib/secure-api';
-import type { ActionResult } from '@/lib/auth-types';
-import type { Subject } from './types';
+export type { Subject, SubjectsResponse } from "./types";
+import { secureApiClient } from "@/lib/secure-api";
+import { Subject as SubjectType, SubjectsResponse as SubjectsResponseType } from "./types";
 
-/**
- * Fetch all subjects
- */
-export async function fetchSubjects(): Promise<ActionResult<Subject[]>> {
+export async function fetchSubjectsByDepartment(departmentId: string, semester?: number): Promise<SubjectsResponseType> {
     try {
-        const response = await secureApiClient.get<Subject[]>('/subjects');
+        const query = semester ? `?semester=${semester}` : '';
+        const res = await secureApiClient.get<SubjectType[]>(`/subjects/department/${departmentId}${query}`);
+        if (res.error) return { success: false, error: res.error };
+        return { success: true, data: res.data };
+    } catch (err: any) {
+        return { success: false, error: err.message || "Failed to fetch subjects" };
+    }
+}
 
-        if (response.error) {
-            return {
-                success: false,
-                error: response.error,
-            };
-        }
-
-        return {
-            success: true,
-            data: response.data!,
-        };
-    } catch (error) {
-        console.error('Fetch subjects error:', error);
-        return {
-            success: false,
-            error: 'Failed to fetch subjects',
-        };
+export async function fetchSubjects(): Promise<SubjectsResponseType> {
+    try {
+        const res = await secureApiClient.get<SubjectType[]>('/subjects');
+        if (res.error) return { success: false, error: res.error };
+        return { success: true, data: res.data };
+    } catch (err: any) {
+        return { success: false, error: err.message || "Failed to fetch subjects" };
     }
 }

@@ -13,6 +13,9 @@ import { HodModule } from './hod/hod.module';
 import { AcademicYearModule } from './academic-year/academic-year.module';
 import { EventsModule } from './events/events.module';
 import { UsersModule } from './users/users.module';
+import { StudentsModule } from './students/students.module';
+import { InternalMarksModule } from './internal-marks/internal-marks.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -27,7 +30,10 @@ import { UsersModule } from './users/users.module';
     HodModule,
     AcademicYearModule,
     EventsModule,
-    UsersModule
+    UsersModule,
+    StudentsModule,
+    InternalMarksModule,
+    AttendanceModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -24,22 +24,20 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * Validate Admin/Staff credentials
    */
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
-    
+
     if (!user) {
       return null;
     }
 
-    // Validate auth method - Admin/Staff must use password
-    if (user.role === 'STUDENT') {
-      throw new ForbiddenException('Students must login via Google');
-    }
+    // Validate auth method - Only Admin/Staff/Student are valid roles
+    // Removed restriction for students to only use Google
 
     // Admin/Staff must have password
     if (!user.password) {
@@ -64,7 +62,7 @@ export class AuthService {
    */
   async loginWithCredentials(loginDto: CredentialLoginDto): Promise<AuthResponse> {
     const user = await this.validateUser(loginDto.email, loginDto.password);
-    
+
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -126,7 +124,7 @@ export class AuthService {
    */
   async createStaff(createStaffDto: CreateStaffDto, adminId: string): Promise<any> {
     const hashedPassword = await bcrypt.hash(createStaffDto.password, 12);
-    
+
     return this.usersService.createStaff({
       ...createStaffDto,
       password: hashedPassword,
@@ -138,12 +136,12 @@ export class AuthService {
    * Generate JWT and auth response
    */
   private async generateAuthResponse(user: any): Promise<AuthResponse> {
-    const payload = { 
+    const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
     };
-    
+
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -162,9 +160,9 @@ export class AuthService {
    */
   async refresh(token: string): Promise<AuthResponse> {
     try {
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.verify(token, { ignoreExpiration: true });
       const user = await this.usersService.findById(payload.sub);
-      
+
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
@@ -189,7 +187,7 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(token);
       const user = await this.usersService.findById(payload.sub);
-      
+
       if (!user || !user.isActive) {
         return null;
       }

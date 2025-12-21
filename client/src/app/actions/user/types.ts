@@ -3,11 +3,7 @@ export interface Department {
   name: string;
 }
 
-export interface Subject {
-  id: string;
-  name: string;
-  code: string;
-}
+import { Subject } from "../subject/types";
 
 export interface StaffSubject {
   id: string;

@@ -2,7 +2,7 @@ import { SessionOptions } from 'iron-session';
 
 export const ironSessionOptions: SessionOptions = {
   password: process.env.SESSION_SECRET || 'your-super-secret-key-here-change-in-production-at-least-32-chars',
-  cookieName: 'civil-session',
+  cookieName: 'CMS-session',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, // Prevent XSS attacks

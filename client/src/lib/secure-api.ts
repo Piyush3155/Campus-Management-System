@@ -72,10 +72,10 @@ class SecureApiClient {
     try {
       const cookieStore = await cookies();
       const session = await getIronSession<SessionData>(cookieStore, ironSessionOptions);
-      console.log('Session check:', { 
-        isLoggedIn: session.isLoggedIn, 
+      console.log('Session check:', {
+        isLoggedIn: session.isLoggedIn,
         hasToken: !!session.accessToken,
-        userId: session.userId 
+        userId: session.userId
       });
       return session;
     } catch (error) {
@@ -86,16 +86,28 @@ class SecureApiClient {
 
   private async validateAndGetToken(): Promise<{ token: string; session: Awaited<ReturnType<typeof getIronSession<SessionData>>> } | null> {
     const session = await this.getSession();
-    
+
     if (!session || !session.isLoggedIn || !session.accessToken) {
       return null;
     }
 
     // Check if token is expired
     if (isTokenExpired(session.accessToken)) {
-      console.log('Token expired, clearing session');
-      await clearSessionData(session);
-      return null;
+      console.log('Token expired in secure-api, attempting refresh...');
+      // Use dynamic import to avoid circular dependency if any
+      const { refreshTokenIfNeeded } = await import('./session-validation');
+      const refreshed = await refreshTokenIfNeeded();
+
+      if (!refreshed) {
+        console.log('Token refresh failed in secure-api, clearing session');
+        await clearSessionData(session);
+        return null;
+      }
+
+      // Reload session to get new token
+      const updatedSession = await this.getSession();
+      if (!updatedSession || !updatedSession.accessToken) return null;
+      return { token: updatedSession.accessToken, session: updatedSession };
     }
 
     return { token: session.accessToken, session };
@@ -103,7 +115,7 @@ class SecureApiClient {
 
   private async getAuthHeaders(): Promise<Record<string, string> | null> {
     const result = await this.validateAndGetToken();
-    
+
     if (!result) {
       return null;
     }
@@ -180,7 +192,7 @@ class SecureApiClient {
   private async makeRequest<T>(method: string, endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       if (!headers) {
         return {
           error: 'Authentication required',
@@ -209,14 +221,14 @@ class SecureApiClient {
       return this.handleResponse<T>(response);
     } catch (error) {
       console.error(`API ${method} error:`, error);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           error: 'Request timeout',
           status: 0
         };
       }
-      
+
       return {
         error: 'Network error',
         status: 0
@@ -255,17 +267,17 @@ export async function hasRole(requiredRole: string): Promise<boolean> {
   try {
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(cookieStore, ironSessionOptions);
-    
+
     if (!session.isLoggedIn || !session.accessToken) {
       return false;
     }
-    
+
     // Check if token is expired
     if (isTokenExpired(session.accessToken)) {
       await clearSessionData(session);
       return false;
     }
-    
+
     return session.roles?.includes(requiredRole) || false;
   } catch {
     return false;
@@ -277,17 +289,17 @@ export async function isAuthenticated(): Promise<boolean> {
   try {
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(cookieStore, ironSessionOptions);
-    
+
     if (!session.isLoggedIn || !session.accessToken) {
       return false;
     }
-    
+
     // Check if token is expired
     if (isTokenExpired(session.accessToken)) {
       await clearSessionData(session);
       return false;
     }
-    
+
     return true;
   } catch {
     return false;

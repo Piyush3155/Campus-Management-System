@@ -92,13 +92,33 @@ export async function validateSession(): Promise<ValidationResult> {
 
     // Check if token is expired (with 30 second buffer)
     if (isTokenExpired(decoded.exp)) {
-      await clearSession(session);
-      return { isValid: false, error: 'Token expired', shouldRedirect: true };
+      console.log('Token expired in validateSession, attempting refresh...');
+      const refreshed = await refreshTokenIfNeeded();
+      if (!refreshed) {
+        await clearSession(session);
+        return { isValid: false, error: 'Token expired and refresh failed', shouldRedirect: true };
+      }
+
+      // Reload session to get new token
+      const updatedSession = await getIronSession<SessionData>(await cookies(), ironSessionOptions);
+      return {
+        isValid: true,
+        session: {
+          isLoggedIn: updatedSession.isLoggedIn,
+          userId: updatedSession.userId,
+          accessToken: updatedSession.accessToken,
+          username: updatedSession.username,
+          name: updatedSession.name,
+          email: updatedSession.email,
+          roles: updatedSession.roles,
+        },
+        shouldRedirect: false
+      };
     }
 
     // Token is valid
-    return { 
-      isValid: true, 
+    return {
+      isValid: true,
       session: {
         isLoggedIn: session.isLoggedIn,
         userId: session.userId,
@@ -108,7 +128,7 @@ export async function validateSession(): Promise<ValidationResult> {
         email: session.email,
         roles: session.roles,
       },
-      shouldRedirect: false 
+      shouldRedirect: false
     };
   } catch (error) {
     console.error('Session validation error:', error);
@@ -167,14 +187,9 @@ export async function refreshTokenIfNeeded(): Promise<boolean> {
     const fiveMinutes = 5 * 60;
     const timeUntilExpiry = decoded.exp - currentTime;
 
-    // If token is already expired, don't try to refresh
-    if (timeUntilExpiry <= 0) {
-      await clearSession(session);
-      return false;
-    }
-
-    // Refresh if token expires within 5 minutes
+    // Refresh if token is expired or expires within 5 minutes
     if (timeUntilExpiry < fiveMinutes) {
+      console.log(`Refreshing token... (Time until expiry: ${timeUntilExpiry}s)`);
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
       try {

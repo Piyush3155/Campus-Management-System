@@ -55,6 +55,19 @@ enum NotificationStatus {
   READ
 }
 
+enum AttendanceSessionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
 // ===========================
 // USER
 // ===========================
@@ -126,6 +139,11 @@ model User {
 
   fcmDeliveryStatuses FcmDeliveryStatus[]
   profile             Profile?
+  internalMarks       InternalMark[]
+  externalMarks       ExternalMark[]
+
+  attendanceSessions AttendanceSession[]
+  attendanceRecords  AttendanceRecord[]
 
   @@index([email])
   @@index([username])
@@ -146,6 +164,9 @@ model Profile {
   gender    Gender?
   address   String?
   DOB       DateTime?
+  semester  Int?
+  section   String?
+  cgpa      Float?
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -300,6 +321,8 @@ model Department {
   subjects   Subject[]
   timetables TimeTable[]
   hod        DepartmentHOD?
+
+  attendanceSessions AttendanceSession[]
 }
 
 enum DepartmentStatus {
@@ -380,6 +403,10 @@ model Subject {
 
   teachers   StaffSubject[]
   timetables TimeTable[]
+  internalMarks InternalMark[]
+  externalMarks ExternalMark[]
+
+  attendanceSessions AttendanceSession[]
 
   @@index([departmentId])
   @@index([semester])
@@ -418,6 +445,8 @@ model TimeTable {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  attendanceSessions AttendanceSession[]
 
   @@index([staffId])
   @@index([departmentId])
@@ -476,4 +505,109 @@ enum AcademicEventType {
   EVENT   @map("Event")
   HOLIDAY @map("Holiday")
   EXAM    @map("Exam")
+}
+
+model InternalMark {
+  id             String         @id @default(cuid())
+  studentId      String
+  subjectId      String
+  marks          Float
+  maxMarks       Float          @default(20)
+  semester       Int
+  assessmentType AssessmentType @default(IA1)
+  remarks        String?
+  
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, subjectId, semester, assessmentType])
+  @@index([studentId])
+  @@index([subjectId])
+}
+
+model ExternalMark {
+  id        String   @id @default(cuid())
+  studentId String
+  subjectId String
+  marks     Float
+  maxMarks  Float    @default(80) // Default external max
+  semester  Int
+  remarks   String?
+
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, subjectId, semester])
+  @@index([studentId])
+  @@index([subjectId])
+}
+
+enum AssessmentType {
+  IA1
+  IA2
+  IA3
+  IA4
+}
+
+// ===========================
+// ATTENDANCE
+// ===========================
+
+model AttendanceSession {
+  id String @id @default(cuid())
+
+  date        DateTime // Actual class date
+  timetableId String
+
+  staffId      String
+  subjectId    String
+  departmentId String
+
+  semester Int
+  section  String?
+
+  startTime DateTime
+  endTime   DateTime
+
+  status   AttendanceSessionStatus @default(PENDING)
+  isLocked Boolean                 @default(false)
+
+  timetable  TimeTable  @relation(fields: [timetableId], references: [id])
+  staff      User       @relation(fields: [staffId], references: [id])
+  subject    Subject    @relation(fields: [subjectId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+
+  records AttendanceRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, timetableId])
+  @@index([date])
+  @@index([staffId])
+  @@index([subjectId])
+}
+
+model AttendanceRecord {
+  id String @id @default(cuid())
+
+  sessionId String
+  studentId String
+
+  status  AttendanceStatus @default(PRESENT)
+  remarks String?
+
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  markedAt DateTime @default(now())
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
 }

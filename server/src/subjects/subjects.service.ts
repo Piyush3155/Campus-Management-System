@@ -12,9 +12,12 @@ export class SubjectsService {
         });
     }
 
-    async getByDepartment(departmentId: string) {
+    async getByDepartment(departmentId: string, semester?: number) {
         return this.prisma.subject.findMany({
-            where: { departmentId },
+            where: {
+                departmentId,
+                ...(semester ? { semester } : {}),
+            },
             include: {
                 department: true,
                 teachers: {

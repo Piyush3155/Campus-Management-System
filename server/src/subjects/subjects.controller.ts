@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,8 +18,11 @@ export class SubjectsController {
 
     @Get('department/:departmentId')
     @ApiOperation({ summary: 'Get subjects by department' })
-    getByDepartment(@Param('departmentId') departmentId: string) {
-        return this.subjectsService.getByDepartment(departmentId);
+    getByDepartment(
+        @Param('departmentId') departmentId: string,
+        @Query('semester') semester?: string,
+    ) {
+        return this.subjectsService.getByDepartment(departmentId, semester ? parseInt(semester) : undefined);
     }
 
     @Get()
