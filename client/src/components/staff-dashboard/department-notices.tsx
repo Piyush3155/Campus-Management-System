@@ -1,66 +1,146 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Layers, AlertCircle, ArrowRight } from "lucide-react"
-
-const deptNotices = [
-  {
-    id: 1,
-    dept: "Computer Science",
-    title: "New Lab Equipment Arrival",
-    date: "2023-11-21",
-    priority: "Standard",
-    message: "New high-performance computing clusters have arrived. Please attend the orientation session on Friday."
-  },
-  {
-    id: 2,
-    dept: "Physics Department",
-    title: "Syllabus Review Meeting",
-    date: "2023-11-20",
-    priority: "Crucial",
-    message: "All faculty members are required to attend the syllabus review meeting for the upcoming semester in Conference Room B."
-  },
-  {
-    id: 3,
-    dept: "Applied Sciences",
-    title: "Workshop on Nanotech",
-    date: "2023-11-19",
-    priority: "Optional",
-    message: "A guest lecture followed by a hands-on workshop on nanotechnology applications is scheduled for next Tuesday."
-  }
-]
+import { Building2, Layers, AlertCircle, ArrowRight, Calendar, User, Pin, Search, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import * as React from "react"
+import { fetchNotices, type Notice } from "@/lib/notices-api"
+import { toast } from "sonner"
 
 export function DepartmentNotices() {
-  return (
-    <div className="grid gap-4">
-      {deptNotices.map((notice) => (
-        <Card key={notice.id} className="group relative overflow-hidden bg-card/40 backdrop-blur-sm border-none shadow-sm hover:translate-x-1 transition-all border-l-4 border-l-blue-500">
-          <CardContent className="p-5 flex flex-col md:flex-row gap-4 items-start">
-            <div className="p-3 rounded-xl bg-blue-50 dark:bg-white/5 text-blue-600">
-               <Building2 className="h-6 w-6" />
+    const [notices, setNotices] = React.useState<Notice[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = React.useState("");
+
+    const loadNotices = React.useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        const result = await fetchNotices("STAFF");
+        if (result.success && result.data) {
+            setNotices(result.data);
+        } else {
+            setError(result.error || "Failed to load notices");
+            toast.error(result.error || "Failed to load notices");
+        }
+        setIsLoading(false);
+    }, []);
+
+    React.useEffect(() => {
+        loadNotices();
+    }, [loadNotices]);
+
+    const filteredNotices = notices.filter(n => {
+        const matchesSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) || n.content.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+    });
+
+    const pinnedNotices = filteredNotices.filter(n => n.pinned);
+    const otherNotices = filteredNotices.filter(n => !n.pinned);
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground animate-pulse">Loading notices...</p>
             </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">{notice.dept}</span>
-                <Badge variant="outline" className={`text-[10px] ${
-                  notice.priority === 'Crucial' ? 'border-red-500 text-red-500' : 
-                  notice.priority === 'Standard' ? 'border-blue-500 text-blue-500' :
-                  'border-green-500 text-green-500'
-                }`}>
-                  {notice.priority}
-                </Badge>
-              </div>
-              <h3 className="font-bold text-lg">{notice.title}</h3>
-              <p className="text-sm text-foreground/70">{notice.message}</p>
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xs text-muted-foreground italic">Posted: {notice.date}</span>
-                <button className="flex items-center gap-1 text-xs font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                   Read Full Notice <ArrowRight className="h-3 w-3" />
-                </button>
-              </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center gap-2 p-4 bg-destructive/10 text-destructive rounded-lg">
+                <AlertCircle className="h-5 w-5" />
+                <p>{error}</p>
+                <Button variant="ghost" size="sm" onClick={() => loadNotices()} className="ml-auto">Retry</Button>
             </div>
-          </CardContent>
+        );
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search notices..."
+                        className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => loadNotices()} disabled={isLoading}>
+                    <Loader2 className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
+            </div>
+
+            {pinnedNotices.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="flex items-center gap-2 font-semibold text-sm text-muted-foreground">
+                        <Pin className="h-4 w-4 rotate-45" /> Pinned Announcements
+                    </h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {pinnedNotices.map(notice => (
+                            <DeptNoticeCard key={notice.id} notice={notice} />
+                        ))}
+                    </div>
+                    <Separator />
+                </div>
+            )}
+
+            <div className="space-y-4">
+                <h3 className="font-semibold text-sm text-muted-foreground">Department Notices</h3>
+                <div className="grid gap-4 md:grid-cols-1">
+                    {otherNotices.length > 0 ? (
+                        otherNotices.map(notice => (
+                            <DeptNoticeCard key={notice.id} notice={notice} />
+                        ))
+                    ) : (
+                        <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                            {pinnedNotices.length === 0 && searchQuery === "" ? "No department notices have been posted yet." : "No notices found matching your criteria."}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DeptNoticeCard({ notice }: { notice: Notice }) {
+    const formattedDate = new Date(notice.createdAt).toLocaleDateString();
+
+    return (
+        <Card className="group relative overflow-hidden bg-card/40 backdrop-blur-sm border-none shadow-sm hover:translate-x-1 transition-all border-l-4 border-l-blue-500">
+            <CardContent className="p-5 flex flex-col md:flex-row gap-4 items-start">
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-white/5 text-blue-600">
+                    <Building2 className="h-6 w-6" />
+                </div>
+                <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Department</span>
+                        <Badge variant="outline" className="text-[10px] border-blue-500 text-blue-500">
+                            Staff Only
+                        </Badge>
+                    </div>
+                    <CardTitle className="text-lg font-bold">{notice.title}</CardTitle>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        <span>{notice.author.name}</span>
+                        <span>•</span>
+                        <Calendar className="h-3 w-3" />
+                        <span>{formattedDate}</span>
+                        {notice.pinned && <Pin className="h-3 w-3 rotate-45 text-primary" />}
+                    </div>
+                    <p className="text-sm text-foreground/80 leading-relaxed mt-2">
+                        {notice.content}
+                    </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+            </CardContent>
         </Card>
-      ))}
-    </div>
-  )
+    );
 }

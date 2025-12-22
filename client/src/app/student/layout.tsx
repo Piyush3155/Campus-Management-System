@@ -72,7 +72,7 @@ export default function StudentLayout({
               </div>
               <h1 className="text-lg font-bold tracking-tight text-foreground">CampusLink</h1>
             </div>
-            <Link href="/student/notifications" className="p-2 rounded-full text-muted-foreground relative">
+            <Link href="/student/notices" className="p-2 rounded-full text-muted-foreground relative">
               <Bell className="h-6 w-6 stroke-[1.5]" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background" />
             </Link>

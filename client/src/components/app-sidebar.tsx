@@ -169,9 +169,9 @@ const studentNav = [
     icon: IconUserCircle,
   },
   {
-    title: "Notifications",
-    url: "/student/notifications",
-    icon: IconBell,
+    title: "Notices",
+    url: "/student/notices",
+    icon: IconSpeakerphone,
   },
 ];
 

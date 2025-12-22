@@ -16,6 +16,7 @@ import { UsersModule } from './users/users.module';
 import { StudentsModule } from './students/students.module';
 import { InternalMarksModule } from './internal-marks/internal-marks.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { NoticesModule } from './notices/notices.module';
 
 @Module({
   imports: [
@@ -33,7 +34,8 @@ import { AttendanceModule } from './attendance/attendance.module';
     UsersModule,
     StudentsModule,
     InternalMarksModule,
-    AttendanceModule
+    AttendanceModule,
+    NoticesModule
   ],
   controllers: [AppController],
   providers: [AppService],

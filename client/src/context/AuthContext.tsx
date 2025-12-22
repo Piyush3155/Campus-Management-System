@@ -60,10 +60,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.authenticated && data.user) {
         setUser(data.user);
         setToken(data.user.token);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('accessToken', data.user.token);
+        }
         return true;
       } else {
         setUser(null);
         setToken(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+        }
         return false;
       }
     } catch (error) {
@@ -96,6 +102,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.success) {
         setUser(result.user);
         setToken(result.token);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('accessToken', result.token);
+        }
         return { success: true, redirectUrl: result.redirectUrl };
       }
 
@@ -136,6 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.success) {
         setUser({ ...result.user, firebaseUser });
         setToken(result.token);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('accessToken', result.token);
+        }
         return { success: true, redirectUrl: result.redirectUrl };
       }
 
@@ -170,6 +182,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(null);
       setToken(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+      }
     } catch (error) {
       console.error("Logout error:", error);
     }

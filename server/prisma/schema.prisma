@@ -144,6 +144,7 @@ model User {
 
   attendanceSessions AttendanceSession[]
   attendanceRecords  AttendanceRecord[]
+  notices            Notice[]
 
   @@index([email])
   @@index([username])
@@ -610,4 +611,31 @@ model AttendanceRecord {
 
   @@unique([sessionId, studentId])
   @@index([studentId])
+}
+
+// ===========================
+// NOTICE & ANNOUNCEMENTS
+// ===========================
+
+model Notice {
+  id        String         @id @default(cuid())
+  title     String
+  content   String
+  audience  NoticeAudience @default(ALL)
+  pinned    Boolean        @default(false)
+  
+  authorId  String
+  author    User           @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([audience])
+  @@index([createdAt])
+}
+
+enum NoticeAudience {
+  ALL
+  STAFF
+  STUDENTS
 }
