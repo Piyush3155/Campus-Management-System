@@ -5,6 +5,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   controllers: [FcmController],
-  providers: [FcmService]
+  providers: [FcmService],
+  exports: [FcmService]
 })
-export class FcmModule {}
+export class FcmModule { }

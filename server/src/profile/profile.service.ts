@@ -4,7 +4,7 @@ import { CreateProfileDto, UpdateProfileDto } from './dto';
 
 @Injectable()
 export class ProfileService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Create a new profile
@@ -48,6 +48,7 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            phone: true,
           },
         },
       },
@@ -77,6 +78,7 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            phone: true,
             department: {
               select: {
                 id: true,
@@ -103,6 +105,7 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            phone: true,
             department: {
               select: {
                 id: true,
@@ -134,6 +137,7 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            phone: true,
             department: {
               select: {
                 id: true,
@@ -186,6 +190,7 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            phone: true,
             department: {
               select: {
                 id: true,
@@ -229,6 +234,7 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            phone: true,
             department: {
               select: {
                 id: true,
@@ -305,6 +311,7 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            phone: true,
             department: {
               select: {
                 id: true,

@@ -68,6 +68,18 @@ enum AttendanceStatus {
   EXCUSED
 }
 
+enum ExamType {
+  FINAL
+  INTERNAL
+  PRACTICAL
+}
+
+enum ExamStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
 // ===========================
 // USER
 // ===========================
@@ -145,6 +157,11 @@ model User {
   attendanceSessions AttendanceSession[]
   attendanceRecords  AttendanceRecord[]
   notices            Notice[]
+
+  // Assignment relations
+  createdAssignments  Assignment[]           @relation("CreatedAssignments")
+  studentSubmissions  AssignmentSubmission[] @relation("StudentSubmissions")
+  markedSubmissions   AssignmentSubmission[] @relation("MarkedSubmissions")
 
   @@index([email])
   @@index([username])
@@ -324,6 +341,7 @@ model Department {
   hod        DepartmentHOD?
 
   attendanceSessions AttendanceSession[]
+  assignments        Assignment[]
 }
 
 enum DepartmentStatus {
@@ -408,6 +426,7 @@ model Subject {
   externalMarks ExternalMark[]
 
   attendanceSessions AttendanceSession[]
+  assignments        Assignment[]
 
   @@index([departmentId])
   @@index([semester])
@@ -634,8 +653,89 @@ model Notice {
   @@index([createdAt])
 }
 
+model Exam {
+  id          String   @id @default(cuid())
+  name        String
+  code        String
+  type        ExamType
+  status      ExamStatus @default(SCHEDULED)
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  room        String
+  description String?
+  
+  // For result publication
+  isResultPublished Boolean @default(false)
+  resultsPublishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([status])
+  @@index([type])
+}
+
 enum NoticeAudience {
   ALL
   STAFF
   STUDENTS
+}
+
+// ===========================
+// ASSIGNMENTS
+// ===========================
+
+model Assignment {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime
+  semester    Int
+  
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  
+  subjectId    String?
+  subject      Subject?   @relation(fields: [subjectId], references: [id])
+  
+  authorId     String
+  author       User       @relation("CreatedAssignments", fields: [authorId], references: [id])
+
+  submissions AssignmentSubmission[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([semester])
+  @@index([departmentId])
+  @@index([authorId])
+}
+
+model AssignmentSubmission {
+  id           String   @id @default(cuid())
+  assignmentId String
+  studentId    String
+  
+  status       SubmissionStatus @default(PENDING)
+  submittedAt  DateTime? // When it was marked as submitted
+  
+  markedById   String?
+  markedBy     User?    @relation("MarkedSubmissions", fields: [markedById], references: [id])
+
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
 }

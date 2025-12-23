@@ -8,13 +8,29 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
-import { Loader2, Shield, Mail, User as UserIcon, Badge } from "lucide-react"
+import { Loader2, Shield, Mail, User as UserIcon, Badge, Phone, MapPin, Info } from "lucide-react"
+import { useEffect } from "react"
+import { getMyProfile } from "@/app/actions/profile/main"
 
 export default function ProfilePage() {
   const { user, loading, isAdmin, isStaff, isStudent, logout } = useAuth()
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [profileData, setProfileData] = useState<any>(null)
+  const [isFetchingProfile, setIsFetchingProfile] = useState(false)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsFetchingProfile(true)
+      const res = await getMyProfile()
+      if (res.success) {
+        setProfileData(res.data)
+      }
+      setIsFetchingProfile(false)
+    }
+    if (user) fetchProfile()
+  }, [user])
 
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -67,12 +83,12 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-semibold tracking-tight">Profile & Account</h2>
-            <p className="text-sm text-muted-foreground">
-              View your account information and security settings.
-            </p>
-          </div>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Profile & Account</h2>
+          <p className="text-sm text-muted-foreground">
+            View your account information and security settings.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -119,17 +135,50 @@ export default function ProfilePage() {
                   </div>
                 )}
 
+                {profileData?.regno && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Registration/Staff ID
+                    </Label>
+                    <p className="font-medium">{profileData.regno}</p>
+                  </div>
+                )}
+
+                {profileData?.user?.phone && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Phone
+                    </Label>
+                    <p className="font-medium">{profileData.user.phone}</p>
+                  </div>
+                )}
+
+                {profileData?.location && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Location
+                    </Label>
+                    <p className="font-medium">{profileData.location}</p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label className="text-muted-foreground">User ID</Label>
                   <p className="font-mono text-sm text-muted-foreground">{user.id}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Account Status</Label>
-                  <p className={`font-medium ${user.isActive ? "text-green-600" : "text-red-600"}`}>
-                    {user.isActive ? "Active" : "Inactive"}
-                  </p>
-                </div>
+                {profileData?.bio && (
+                  <div className="col-span-full space-y-2 border-t pt-4">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Bio
+                    </Label>
+                    <p className="text-sm leading-relaxed">{profileData.bio}</p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -147,21 +196,21 @@ export default function ProfilePage() {
                 <form onSubmit={handleUpdatePassword} className="space-y-4">
                   <div className="grid gap-2">
                     <Label htmlFor="newPassword">New Password</Label>
-                    <Input 
-                      id="newPassword" 
+                    <Input
+                      id="newPassword"
                       type="password"
-                      value={newPassword} 
-                      onChange={(e) => setNewPassword(e.target.value)} 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
                     />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input 
-                      id="confirmPassword" 
+                    <Input
+                      id="confirmPassword"
                       type="password"
-                      value={confirmPassword} 
-                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
                     />
                   </div>
@@ -197,15 +246,15 @@ export default function ProfilePage() {
           </Card>
 
           {/* Logout Button */}
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             className="w-full"
             onClick={handleLogout}
           >
             Sign Out
           </Button>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }

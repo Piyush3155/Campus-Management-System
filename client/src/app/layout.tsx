@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import { FcmHandler } from "@/components/auth/FcmHandler";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -27,9 +28,9 @@ export default function RootLayout({
         className={`${inter.variable} font-sans antialiased`}
       >
         <AuthProvider>
-
-        {children}
-        <Toaster />
+          <FcmHandler />
+          {children}
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

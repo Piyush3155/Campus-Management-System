@@ -11,13 +11,14 @@ interface SessionData {
   name?: string;
   email?: string;
   roles?: string[];
+  profileImageUrl?: string;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes that don't require authentication
-  const publicRoutes = [ '/login', '/signup', '/forgot-password', '/api']
+  const publicRoutes = ['/login', '/signup', '/forgot-password', '/api']
   const isPublicRoute = publicRoutes.some(route =>
     pathname === route || pathname.startsWith(`${route}/`)
   )
@@ -53,7 +54,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
 
-// ...existing code...
+    // ...existing code...
 
     // Handle dashboard redirects
     if (pathname.startsWith('/dashboard')) {

@@ -11,6 +11,7 @@ interface SessionData {
   name?: string;
   email?: string;
   roles?: string[];
+  profileImageUrl?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
         session.name = result.data.user.name;
         session.email = result.data.user.email;
         session.roles = [result.data.user.role];
+        session.profileImageUrl = result.data.user.profileImageUrl;
 
         // Save session (this will set cookies on the response)
         await session.save();
@@ -104,7 +106,10 @@ export async function GET(request: NextRequest) {
         username: tempSession.username,
         name: tempSession.name,
         email: tempSession.email,
+        role: tempSession.roles?.[0] || 'STUDENT', // Singular role for compatibility
         roles: tempSession.roles,
+        profileImageUrl: tempSession.profileImageUrl,
+        token: tempSession.accessToken, // Pass token to client side
       }
     } : {
       authenticated: false

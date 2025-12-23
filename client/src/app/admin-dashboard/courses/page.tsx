@@ -20,18 +20,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { 
-    MoreHorizontal, 
-    ArrowUpDown, 
-    Plus, 
-    Search,
-    FileEdit,
-    Trash2,
-    BookOpen,
-    Filter,
-    Loader2,
-    ChevronUp,
-    ChevronDown
+import {
+  MoreHorizontal,
+  ArrowUpDown,
+  Plus,
+  Search,
+  FileEdit,
+  Trash2,
+  BookOpen,
+  Filter,
+  Loader2,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react"
 import {
   Select,
@@ -45,10 +45,10 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { 
-  fetchCourses, 
-  createCourse, 
-  updateCourse, 
+import {
+  fetchCourses,
+  createCourse,
+  updateCourse,
   deleteCourse,
   type Course,
   type CourseType,
@@ -120,7 +120,7 @@ export default function CoursesPage() {
   // Load courses and departments
   useEffect(() => {
     let mounted = true;
-    
+
     async function loadData() {
       setIsLoading(true)
       try {
@@ -128,7 +128,7 @@ export default function CoursesPage() {
           fetchCourses(),
           fetchDepartments()
         ]);
-        
+
         if (!mounted) return;
 
         if (coursesResult.success && coursesResult.data) {
@@ -151,9 +151,9 @@ export default function CoursesPage() {
         }
       }
     }
-    
+
     loadData()
-    
+
     return () => {
       mounted = false;
     }
@@ -186,9 +186,9 @@ export default function CoursesPage() {
           status: formData.status,
           departmentId: formData.departmentId
         }
-        
+
         const result = await updateCourse(currentCourse.id, updateData)
-        
+
         if (result.success && result.data) {
           setCourses(prev => prev.map(c => c.id === currentCourse.id ? result.data! : c))
           toast.success("Course updated successfully")
@@ -210,9 +210,9 @@ export default function CoursesPage() {
           status: formData.status,
           departmentId: formData.departmentId
         }
-        
+
         const result = await createCourse(createData)
-        
+
         if (result.success && result.data) {
           setCourses(prev => [...prev, result.data!])
           toast.success("Course created successfully")
@@ -221,7 +221,7 @@ export default function CoursesPage() {
           return
         }
       }
-      
+
       setIsSheetOpen(false)
       resetForm()
     } catch (error) {
@@ -231,7 +231,7 @@ export default function CoursesPage() {
       setIsSaving(false)
     }
   }
-  
+
   const handleEdit = useCallback((course: Course) => {
     setCurrentCourse(course)
     setFormData({
@@ -251,10 +251,10 @@ export default function CoursesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this course?")) return
-    
+
     try {
       const result = await deleteCourse(id)
-      
+
       if (result.success) {
         setCourses(prev => prev.filter(c => c.id !== id))
         toast.success("Course deleted successfully")
@@ -277,29 +277,30 @@ export default function CoursesPage() {
 
   // Filtered and sorted data
   const filteredAndSortedCourses = useMemo(() => {
+    if (!Array.isArray(courses)) return []
     let result = [...courses]
-    
+
     // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      result = result.filter(course => 
+      result = result.filter(course =>
         course.title.toLowerCase().includes(query) ||
         course.code.toLowerCase().includes(query) ||
         course.department?.name?.toLowerCase().includes(query)
       )
     }
-    
+
     // Filter by type
     if (typeFilter !== "all") {
       result = result.filter(course => course.type === typeFilter)
     }
-    
+
     // Sort
     if (sortConfig.direction) {
       result.sort((a, b) => {
         let aVal: string | number = '';
         let bVal: string | number = '';
-        
+
         if (sortConfig.key === 'departmentName') {
           aVal = a.department?.name || '';
           bVal = b.department?.name || '';
@@ -307,18 +308,18 @@ export default function CoursesPage() {
           aVal = a[sortConfig.key] as string | number ?? '';
           bVal = b[sortConfig.key] as string | number ?? '';
         }
-        
+
         if (typeof aVal === 'string') {
           aVal = aVal.toLowerCase();
           bVal = (bVal as string).toLowerCase();
         }
-        
+
         if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       })
     }
-    
+
     return result
   }, [courses, searchQuery, typeFilter, sortConfig])
 
@@ -335,7 +336,7 @@ export default function CoursesPage() {
   // Sort icon helper
   const SortIcon = ({ columnKey }: { columnKey: keyof Course | 'departmentName' }) => {
     if (sortConfig.key !== columnKey) return <ArrowUpDown className="ml-2 h-4 w-4" />
-    return sortConfig.direction === 'asc' 
+    return sortConfig.direction === 'asc'
       ? <ChevronUp className="ml-2 h-4 w-4" />
       : <ChevronDown className="ml-2 h-4 w-4" />
   }
@@ -362,219 +363,219 @@ export default function CoursesPage() {
 
   return (
     <div className="w-full p-6 space-y-6">
-       <div className="flex items-center justify-between">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Course Management</h1>
-                <p className="text-muted-foreground">Manage academic programs, courses, and curriculum structures.</p>
-            </div>
-            
-            <Sheet open={isSheetOpen} onOpenChange={(open) => {
-                setIsSheetOpen(open)
-                if(!open) resetForm()
-            }}>
-                <SheetTrigger asChild>
-                    <Button>
-                        <Plus className="mr-2 h-4 w-4" /> Add Course
-                    </Button>
-                </SheetTrigger>
-                <SheetContent className="overflow-y-auto">
-                    <SheetHeader>
-                        <SheetTitle>{currentCourse ? 'Edit Course' : 'Create New Course'}</SheetTitle>
-                        <SheetDescription>
-                            {currentCourse ? 'Update course details below.' : 'Add a new course to the system.'}
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="title">Course Title</Label>
-                            <Input 
-                                id="title" 
-                                value={formData.title} 
-                                onChange={(e) => setFormData({...formData, title: e.target.value})} 
-                                placeholder="Bachelor of Science in..." 
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                             <div className="grid gap-2">
-                                <Label htmlFor="code">Course Code</Label>
-                                <Input 
-                                    id="code" 
-                                    value={formData.code} 
-                                    onChange={(e) => setFormData({...formData, code: e.target.value})} 
-                                    placeholder="B.Sc" 
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="type">Type</Label>
-                                <Select value={formData.type} onValueChange={(val) => setFormData({...formData, type: val as CourseType})}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="UNDERGRADUATE">Undergraduate</SelectItem>
-                                        <SelectItem value="POSTGRADUATE">Postgraduate</SelectItem>
-                                        <SelectItem value="DIPLOMA">Diploma</SelectItem>
-                                        <SelectItem value="PUC">PUC</SelectItem>
-                                        <SelectItem value="SCHOOL">School</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="description">Description</Label>
-                            <Textarea 
-                                id="description" 
-                                value={formData.description} 
-                                onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                                placeholder="Course description..." 
-                                rows={3}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="department">Department</Label>
-                             <Select value={formData.departmentId} onValueChange={(val) => setFormData({...formData, departmentId: val})}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Department" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {departments.map(dept => (
-                                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="duration">Duration</Label>
-                                <Select value={formData.duration} onValueChange={(val) => setFormData({...formData, duration: val})}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Duration" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="6 Months">6 Months</SelectItem>
-                                        <SelectItem value="1 Year">1 Year</SelectItem>
-                                        <SelectItem value="2 Years">2 Years</SelectItem>
-                                        <SelectItem value="3 Years">3 Years</SelectItem>
-                                        <SelectItem value="4 Years">4 Years</SelectItem>
-                                        <SelectItem value="5 Years">5 Years</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="semesters">Total Semesters</Label>
-                                <Input 
-                                    id="semesters" 
-                                    type="number"
-                                    min={1}
-                                    max={12}
-                                    value={formData.totalSemesters} 
-                                    onChange={(e) => setFormData({...formData, totalSemesters: parseInt(e.target.value) || 0})} 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="credits">Credits</Label>
-                                <Input 
-                                    id="credits" 
-                                    type="number"
-                                    min={0}
-                                    value={formData.credits} 
-                                    onChange={(e) => setFormData({...formData, credits: parseInt(e.target.value) || 0})} 
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="maxEnrollment">Max Enrollment</Label>
-                                <Input 
-                                    id="maxEnrollment" 
-                                    type="number"
-                                    min={1}
-                                    value={formData.maxEnrollment} 
-                                    onChange={(e) => setFormData({...formData, maxEnrollment: parseInt(e.target.value) || 0})} 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="status">Status</Label>
-                            <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val as 'ACTIVE' | 'INACTIVE'})}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ACTIVE">Active</SelectItem>
-                                    <SelectItem value="INACTIVE">Inactive</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        
-                        <Button className="mt-4" onClick={handleSave} disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {currentCourse ? 'Save Changes' : 'Create Course'}
-                        </Button>
-                    </div>
-                </SheetContent>
-            </Sheet>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Course Management</h1>
+          <p className="text-muted-foreground">Manage academic programs, courses, and curriculum structures.</p>
         </div>
+
+        <Sheet open={isSheetOpen} onOpenChange={(open) => {
+          setIsSheetOpen(open)
+          if (!open) resetForm()
+        }}>
+          <SheetTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Add Course
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>{currentCourse ? 'Edit Course' : 'Create New Course'}</SheetTitle>
+              <SheetDescription>
+                {currentCourse ? 'Update course details below.' : 'Add a new course to the system.'}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Course Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Bachelor of Science in..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="code">Course Code</Label>
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    placeholder="B.Sc"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val as CourseType })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UNDERGRADUATE">Undergraduate</SelectItem>
+                      <SelectItem value="POSTGRADUATE">Postgraduate</SelectItem>
+                      <SelectItem value="DIPLOMA">Diploma</SelectItem>
+                      <SelectItem value="PUC">PUC</SelectItem>
+                      <SelectItem value="SCHOOL">School</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Course description..."
+                  rows={3}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="department">Department</Label>
+                <Select value={formData.departmentId} onValueChange={(val) => setFormData({ ...formData, departmentId: val })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="duration">Duration</Label>
+                  <Select value={formData.duration} onValueChange={(val) => setFormData({ ...formData, duration: val })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="6 Months">6 Months</SelectItem>
+                      <SelectItem value="1 Year">1 Year</SelectItem>
+                      <SelectItem value="2 Years">2 Years</SelectItem>
+                      <SelectItem value="3 Years">3 Years</SelectItem>
+                      <SelectItem value="4 Years">4 Years</SelectItem>
+                      <SelectItem value="5 Years">5 Years</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="semesters">Total Semesters</Label>
+                  <Input
+                    id="semesters"
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={formData.totalSemesters}
+                    onChange={(e) => setFormData({ ...formData, totalSemesters: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="credits">Credits</Label>
+                  <Input
+                    id="credits"
+                    type="number"
+                    min={0}
+                    value={formData.credits}
+                    onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="maxEnrollment">Max Enrollment</Label>
+                  <Input
+                    id="maxEnrollment"
+                    type="number"
+                    min={1}
+                    value={formData.maxEnrollment}
+                    onChange={(e) => setFormData({ ...formData, maxEnrollment: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val as 'ACTIVE' | 'INACTIVE' })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button className="mt-4" onClick={handleSave} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {currentCourse ? 'Save Changes' : 'Create Course'}
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
 
       <div className="flex items-center gap-4 py-4">
         <div className="relative flex-1 max-w-sm">
-             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search courses..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setCurrentPage(0)
-              }}
-              className="pl-8"
-            />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search courses..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setCurrentPage(0)
+            }}
+            className="pl-8"
+          />
         </div>
 
         <div className="flex items-center gap-2">
-             <Select 
-                 value={typeFilter}
-                 onValueChange={(val) => {
-                   setTypeFilter(val)
-                   setCurrentPage(0)
-                 }}
-             >
-                <SelectTrigger className="w-[160px]">
-                    <div className="flex items-center gap-2">
-                        <Filter className="h-4 w-4" />
-                        <SelectValue placeholder="Type" />
-                    </div>
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="UNDERGRADUATE">Undergraduate</SelectItem>
-                    <SelectItem value="POSTGRADUATE">Postgraduate</SelectItem>
-                    <SelectItem value="DIPLOMA">Diploma</SelectItem>
-                    <SelectItem value="PUC">PUC</SelectItem>
-                    <SelectItem value="SCHOOL">School</SelectItem>
-                </SelectContent>
-             </Select>
+          <Select
+            value={typeFilter}
+            onValueChange={(val) => {
+              setTypeFilter(val)
+              setCurrentPage(0)
+            }}
+          >
+            <SelectTrigger className="w-[160px]">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <SelectValue placeholder="Type" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="UNDERGRADUATE">Undergraduate</SelectItem>
+              <SelectItem value="POSTGRADUATE">Postgraduate</SelectItem>
+              <SelectItem value="DIPLOMA">Diploma</SelectItem>
+              <SelectItem value="PUC">PUC</SelectItem>
+              <SelectItem value="SCHOOL">School</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="ml-auto">
-                    Columns <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    {Object.entries(visibleColumns).filter(([key]) => key !== 'actions').map(([key, visible]) => (
-                      <DropdownMenuCheckboxItem
-                          key={key}
-                          className="capitalize"
-                          checked={visible}
-                          onCheckedChange={(value) =>
-                            setVisibleColumns(prev => ({ ...prev, [key]: !!value }))
-                          }
-                      >
-                          {key === 'totalSemesters' ? 'Semesters' : key}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-auto">
+                Columns <ArrowUpDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {Object.entries(visibleColumns).filter(([key]) => key !== 'actions').map(([key, visible]) => (
+                <DropdownMenuCheckboxItem
+                  key={key}
+                  className="capitalize"
+                  checked={visible}
+                  onCheckedChange={(value) =>
+                    setVisibleColumns(prev => ({ ...prev, [key]: !!value }))
+                  }
+                >
+                  {key === 'totalSemesters' ? 'Semesters' : key}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <div className="rounded-md border">
@@ -654,8 +655,8 @@ export default function CoursesPage() {
                             <FileEdit className="mr-2 h-4 w-4" /> Edit Details
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive" 
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
                             onClick={() => handleDelete(course.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" /> Delete Course

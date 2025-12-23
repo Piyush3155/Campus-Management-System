@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react"
 import {
   Table,
   TableBody,
@@ -9,83 +10,173 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, Download, CheckCircle, Clock } from "lucide-react"
+import { FileText, CheckCircle, Clock, Loader2, Search } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
+import { Assignment, StudentSubmission, fetchAssignmentSubmissions, markAsSubmitted } from "@/lib/assignments-api"
+import { format } from "date-fns"
+import { toast } from "sonner"
 
-const submissions = [
-  { id: "SUB001", student: "Alice Johnson", rollNo: "2023CS01", date: "2023-11-04 10:30 AM", status: "Graded", grade: "A+" },
-  { id: "SUB002", student: "Bob Smith", rollNo: "2023CS02", date: "2023-11-04 02:15 PM", status: "Submitted", grade: "-" },
-  { id: "SUB003", student: "David Wilson", rollNo: "2023CS04", date: "2023-11-05 09:00 AM", status: "Submitted", grade: "-" },
-  { id: "SUB004", student: "Eve Davis", rollNo: "2023CS05", date: "2023-11-05 11:45 PM", status: "Late Submission", grade: "-" },
-]
+interface SubmissionStatusProps {
+  assignments: Assignment[]
+}
 
-export function SubmissionStatus() {
+export function SubmissionStatus({ assignments }: SubmissionStatusProps) {
+  const [selectedAsgId, setSelectedAsgId] = useState<string>("")
+  const [submissions, setSubmissions] = useState<StudentSubmission[]>([])
+  const [loading, setLoading] = useState(false)
+  const [markingId, setMarkingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (selectedAsgId) {
+      loadSubmissions(selectedAsgId)
+    }
+  }, [selectedAsgId])
+
+  async function loadSubmissions(id: string) {
+    setLoading(true)
+    const res = await fetchAssignmentSubmissions(id)
+    if (res.success) {
+      setSubmissions(res.data || [])
+    } else {
+      toast.error(res.error || "Failed to load submissions")
+    }
+    setLoading(false)
+  }
+
+  async function handleMarkSubmitted(studentId: string) {
+    setMarkingId(studentId)
+    const res = await markAsSubmitted(selectedAsgId, studentId)
+    if (res.success) {
+      toast.success("Marked as submitted")
+      // Update local state
+      setSubmissions(prev => prev.map(s =>
+        s.id === studentId ? { ...s, submission: { ...s.submission, status: "SUBMITTED", submittedAt: new Date().toISOString() } } : s
+      ))
+    } else {
+      toast.error(res.error || "Failed to mark as submitted")
+    }
+    setMarkingId(null)
+  }
+
+  const selectedAsg = assignments.find(a => a.id === selectedAsgId)
+
+  const totalStudents = submissions.length
+  const submittedCount = submissions.filter(s => s.submission.status === "SUBMITTED").length
+  const pendingCount = totalStudents - submittedCount
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-            <h2 className="text-xl font-bold">Calculus Problem Set 1 - Submissions</h2>
-            <p className="text-sm text-muted-foreground">Class: Mathematics Sec A | Due: Nov 05, 2023</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="w-full md:w-1/2">
+          <label className="text-sm font-medium mb-2 block">Select Assignment to Review</label>
+          <Select onValueChange={setSelectedAsgId} value={selectedAsgId}>
+            <SelectTrigger className="bg-card">
+              <SelectValue placeholder="Choose an assignment..." />
+            </SelectTrigger>
+            <SelectContent>
+              {assignments.map(a => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.title} (Sem {a.semester})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Button variant="outline" className="flex gap-2">
-            <Download className="h-4 w-4" /> Download All (.zip)
-        </Button>
+        {selectedAsg && (
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Due: {selectedAsg.dueDate ? format(new Date(selectedAsg.dueDate), 'MMM dd, yyyy') : 'N/A'}</p>
+          </div>
+        )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {[
-            { label: "Total Students", value: "45", icon: FileText, color: "text-blue-500" },
-            { label: "Submitted", value: "42", icon: CheckCircle, color: "text-green-500" },
-            { label: "Pending", value: "3", icon: Clock, color: "text-orange-500" },
-            { label: "Avg. Grade", value: "B+", icon: FileText, color: "text-purple-500" },
-        ].map((s, i) => (
-            <Card key={i} className="bg-card/30 backdrop-blur-sm border-none shadow-sm">
+      {selectedAsgId ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { label: "Total Students", value: totalStudents.toString(), icon: FileText, color: "text-blue-500" },
+              { label: "Submitted", value: submittedCount.toString(), icon: CheckCircle, color: "text-green-500" },
+              { label: "Pending", value: pendingCount.toString(), icon: Clock, color: "text-orange-500" },
+            ].map((s, i) => (
+              <Card key={i} className="bg-card/30 backdrop-blur-sm border-none shadow-sm">
                 <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                        <p className="text-[10px] font-medium text-muted-foreground uppercase">{s.label}</p>
-                        <p className="text-xl font-bold">{s.value}</p>
-                    </div>
-                    <s.icon className={`h-8 w-8 ${s.color} opacity-20`} />
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase">{s.label}</p>
+                    <p className="text-xl font-bold">{s.value}</p>
+                  </div>
+                  <s.icon className={`h-8 w-8 ${s.color} opacity-20`} />
                 </CardContent>
-            </Card>
-        ))}
-      </div>
-
-      <div className="rounded-md border bg-card/50 overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow>
-              <TableHead className="pl-6">Student</TableHead>
-              <TableHead>Roll No</TableHead>
-              <TableHead>Submission Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Grade</TableHead>
-              <TableHead className="text-right pr-6">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {submissions.map((sub) => (
-              <TableRow key={sub.id} className="hover:bg-muted/10">
-                <TableCell className="pl-6 font-medium">{sub.student}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">{sub.rollNo}</TableCell>
-                <TableCell className="text-sm">{sub.date}</TableCell>
-                <TableCell>
-                  <Badge className={
-                    sub.status === "Graded" ? "bg-green-100 text-green-700 border-none" :
-                    sub.status === "Submitted" ? "bg-blue-100 text-blue-700 border-none" :
-                    "bg-orange-100 text-orange-700 border-none"
-                  }>
-                    {sub.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-bold">{sub.grade}</TableCell>
-                <TableCell className="text-right pr-6">
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Evaluate</Button>
-                </TableCell>
-              </TableRow>
+              </Card>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+          </div>
+
+          <div className="rounded-md border bg-card/50 overflow-hidden">
+            {loading ? (
+              <div className="flex justify-center p-20"><Loader2 className="animate-spin" /></div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead className="pl-6">Student Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Submission Date</TableHead>
+                    <TableHead className="text-right pr-6">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submissions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No students found for this assignment's semester.</TableCell>
+                    </TableRow>
+                  ) : submissions.map((sub) => (
+                    <TableRow key={sub.id} className="hover:bg-muted/10 transition-colors">
+                      <TableCell className="pl-6 font-medium">{sub.name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{sub.email}</TableCell>
+                      <TableCell>
+                        <Badge className={
+                          sub.submission.status === "SUBMITTED" ? "bg-green-100 text-green-700 border-none px-2" : "bg-orange-100 text-orange-700 border-none px-2"
+                        }>
+                          {sub.submission.status === "SUBMITTED" ? "Submitted" : "Pending"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {sub.submission.submittedAt ? format(new Date(sub.submission.submittedAt), 'MMM dd, HH:mm') : '-'}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        {sub.submission.status === "PENDING" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-[10px] font-bold uppercase tracking-tight"
+                            onClick={() => handleMarkSubmitted(sub.id)}
+                            disabled={markingId === sub.id}
+                          >
+                            {markingId === sub.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}
+                            Mark Submitted
+                          </Button>
+                        ) : (
+                          <span className="text-[10px] text-green-600 font-bold uppercase">Completed</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed rounded-xl bg-muted/20">
+          <Search className="h-10 w-10 text-muted-foreground opacity-20 mb-4" />
+          <p className="text-muted-foreground font-medium">Please select an assignment above to view student submissions.</p>
+        </div>
+      )}
     </div>
   )
 }

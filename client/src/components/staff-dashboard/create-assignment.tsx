@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,9 +10,77 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { FileUp, Calendar as CalendarIcon, Info } from "lucide-react"
+import { FileUp, Calendar as CalendarIcon, Info, Loader2 } from "lucide-react"
+import { fetchDepartments, fetchSubjects, createAssignment } from "@/lib/assignments-api"
+import { toast } from "sonner"
 
-export function CreateAssignment() {
+interface CreateAssignmentProps {
+  onSuccess: () => void
+}
+
+export function CreateAssignment({ onSuccess }: CreateAssignmentProps) {
+  const [loading, setLoading] = useState(false)
+  const [departments, setDepartments] = useState<any[]>([])
+  const [subjects, setSubjects] = useState<any[]>([])
+
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+    semester: "",
+    departmentId: "",
+    subjectId: ""
+  })
+
+  useEffect(() => {
+    loadDepartments()
+  }, [])
+
+  useEffect(() => {
+    if (formData.departmentId) {
+      loadSubjects(formData.departmentId, formData.semester ? parseInt(formData.semester) : undefined)
+    }
+  }, [formData.departmentId, formData.semester])
+
+  async function loadDepartments() {
+    const res = await fetchDepartments()
+    if (res.success) setDepartments(res.data || [])
+  }
+
+  async function loadSubjects(deptId: string, sem?: number) {
+    const res = await fetchSubjects(deptId, sem)
+    if (res.success) setSubjects(res.data || [])
+  }
+
+  async function handleSubmit() {
+    if (!formData.title || !formData.dueDate || !formData.semester || !formData.departmentId) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    setLoading(true)
+    const result = await createAssignment({
+      ...formData,
+      semester: parseInt(formData.semester),
+    })
+
+    if (result.success) {
+      toast.success("Assignment published successfully")
+      setFormData({
+        title: "",
+        description: "",
+        dueDate: "",
+        semester: "",
+        departmentId: "",
+        subjectId: ""
+      })
+      onSuccess()
+    } else {
+      toast.error(result.error || "Failed to publish assignment")
+    }
+    setLoading(false)
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
@@ -22,40 +91,29 @@ export function CreateAssignment() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Assignment Title</label>
-              <Input placeholder="e.g. Introduction to Thermal Physics" className="bg-background/50" />
+              <label className="text-sm font-medium">Assignment Title *</label>
+              <Input
+                placeholder="e.g. Introduction to Thermal Physics"
+                className="bg-background/50"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Instructions (Markdown supported)</label>
-              <Textarea 
-                placeholder="Detail what students need to do..." 
-                className="min-h-[200px] bg-background/50 resize-none" 
+              <label className="text-sm font-medium">Instructions (Optional)</label>
+              <Textarea
+                placeholder="Detail what students need to do..."
+                className="min-h-[200px] bg-background/50 resize-none"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
             <div className="p-4 rounded-lg bg-blue-50/50 border border-blue-100 dark:bg-blue-900/10 dark:border-blue-800 flex gap-3">
-                <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
-                    <p className="font-semibold">Teacher Tip:</p>
-                    <p>Be specific about formatting requirements and deadline expectations to reduce student queries.</p>
-                </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/50 backdrop-blur-sm border-none shadow-md">
-          <CardHeader>
-            <CardTitle>Attachments</CardTitle>
-            <CardDescription>Upload reference materials or question papers.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border-2 border-dashed border-muted rounded-xl p-10 flex flex-col items-center justify-center text-center space-y-3 hover:bg-muted/10 transition-colors cursor-pointer group">
-                <div className="h-12 w-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileUp className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                    <p className="font-medium">Click to upload or drag and drop</p>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, ZIP or Images (Max 10MB)</p>
-                </div>
+              <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+                <p className="font-semibold">Note:</p>
+                <p>Students will see this assignment and should submit their work in hard copy as instructed.</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -68,53 +126,71 @@ export function CreateAssignment() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Class</label>
-              <Select>
+              <label className="text-sm font-medium">Department *</label>
+              <Select onValueChange={(val) => setFormData({ ...formData, departmentId: val })}>
                 <SelectTrigger className="bg-background/50">
-                  <SelectValue placeholder="Select Class" />
+                  <SelectValue placeholder="Select Department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CS101">Mathematics (Sec A)</SelectItem>
-                  <SelectItem value="CS202">Physics (Sec B)</SelectItem>
-                  <SelectItem value="CS303">CS (Sec C)</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Points / Weightage</label>
-              <Input type="number" placeholder="100" className="bg-background/50" />
+              <label className="text-sm font-medium">Semester *</label>
+              <Select onValueChange={(val) => setFormData({ ...formData, semester: val })}>
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue placeholder="Select Semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                    <SelectItem key={sem} value={sem.toString()}>Semester {sem}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Due Date</label>
+              <label className="text-sm font-medium">Subject (Optional)</label>
+              <Select onValueChange={(val) => setFormData({ ...formData, subjectId: val })} disabled={!formData.departmentId}>
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue placeholder="Select Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.map(sub => (
+                    <SelectItem key={sub.id} value={sub.id}>{sub.name} ({sub.code})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Due Date *</label>
               <div className="relative">
-                <Input type="date" className="bg-background/50 pl-10" />
+                <Input
+                  type="date"
+                  className="bg-background/50 pl-10"
+                  value={formData.dueDate}
+                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                />
                 <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
             </div>
 
             <div className="pt-4 space-y-2">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Publish Assignment</Button>
-                <Button variant="outline" className="w-full">Save as Draft</Button>
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+                Publish Assignment
+              </Button>
             </div>
           </CardContent>
-        </Card>
-
-        <Card className="bg-slate-900 border-none shadow-xl text-white">
-            <CardHeader>
-                <CardTitle className="text-sm font-semibold opacity-80 uppercase tracking-wider">Quick Preview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-[10px] opacity-40 uppercase">Visibility</p>
-                    <p className="text-sm font-medium">All students in selected class</p>
-                </div>
-                <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-[10px] opacity-40 uppercase">Late Submission</p>
-                    <p className="text-sm font-medium">Allowed (with penalty)</p>
-                </div>
-            </CardContent>
         </Card>
       </div>
     </div>

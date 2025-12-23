@@ -45,6 +45,7 @@ export interface CreateStudentData {
     departmentId?: string;
     semester?: number;
     section?: string;
+    regno?: string;
     cgpa?: number;
 }
 

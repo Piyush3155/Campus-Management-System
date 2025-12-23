@@ -8,6 +8,7 @@ export interface AuthUser {
   username?: string;
   role: "ADMIN" | "STAFF" | "STUDENT";
   isActive: boolean;
+  profileImageUrl?: string;
 }
 
 /**

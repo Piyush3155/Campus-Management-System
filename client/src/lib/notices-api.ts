@@ -3,7 +3,7 @@ import { ActionResult } from "./auth-api";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:5001";
 const TOKEN_KEY = 'accessToken';
 
-function getAuthHeader() {
+function getAuthHeader(): Record<string, string> {
     if (typeof window === 'undefined') return {};
     const token = localStorage.getItem(TOKEN_KEY);
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -36,7 +36,7 @@ export async function fetchNotices(audience?: string): Promise<ActionResult<Noti
             headers: {
                 "Content-Type": "application/json",
                 ...getAuthHeader(),
-            },
+            } as HeadersInit,
         });
 
         const data = await response.json();
@@ -73,7 +73,7 @@ export async function createNotice(noticeData: {
             headers: {
                 "Content-Type": "application/json",
                 ...getAuthHeader(),
-            },
+            } as HeadersInit,
             body: JSON.stringify({
                 ...noticeData,
                 audience: noticeData.audience.toUpperCase()
@@ -114,7 +114,7 @@ export async function updateNotice(id: string, noticeData: {
             headers: {
                 "Content-Type": "application/json",
                 ...getAuthHeader(),
-            },
+            } as HeadersInit,
             body: JSON.stringify({
                 ...noticeData,
                 audience: noticeData.audience?.toUpperCase()
@@ -147,9 +147,7 @@ export async function deleteNotice(id: string): Promise<ActionResult<void>> {
     try {
         const response = await fetch(`${API_URL}/notices/${id}`, {
             method: "DELETE",
-            headers: {
-                ...getAuthHeader(),
-            },
+            headers: getAuthHeader() as HeadersInit,
         });
 
         if (!response.ok) {
@@ -176,9 +174,7 @@ export async function toggleNoticePin(id: string): Promise<ActionResult<Notice>>
     try {
         const response = await fetch(`${API_URL}/notices/${id}/pin`, {
             method: "PATCH",
-            headers: {
-                ...getAuthHeader(),
-            },
+            headers: getAuthHeader() as HeadersInit,
         });
 
         const data = await response.json();

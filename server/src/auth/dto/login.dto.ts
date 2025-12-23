@@ -61,5 +61,6 @@ export interface AuthResponse {
     username?: string;
     role: string;
     isActive: boolean;
+    profileImageUrl?: string;
   };
 }

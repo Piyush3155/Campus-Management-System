@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   BarChart3,
   TrendingUp,
@@ -8,46 +8,39 @@ import {
   AlertTriangle,
   Loader2
 } from "lucide-react"
-import { getUserInfo } from "@/lib/session"
+import { useAuth } from "@/context/AuthContext"
 import { fetchStudentAttendance } from "@/app/actions/attendance/main"
 import { toast } from "sonner"
+import { StudentAttendanceReport } from "@/app/actions/attendance/types"
 
-interface SubjectAttendance {
-  subject: string;
-  percentage: number;
-  present: number;
-  total: number;
-  status: string;
-}
 
 export default function StudentAttendancePage() {
-  const [loading, setLoading] = useState(true)
-  const [report, setReport] = useState<any>(null)
-  const [subjectBreakdown, setSubjectBreakdown] = useState<SubjectAttendance[]>([])
+  const { user, loading: authLoading } = useAuth()
+  const [report, setReport] = useState<StudentAttendanceReport | null>(null)
+  const [fetching, setFetching] = useState(false)
 
   useEffect(() => {
-    const user = getUserInfo() as any
-    if (user?.userId) {
-      loadAttendance(user.userId)
+    if (!authLoading && user?.id) {
+      const loadAttendance = async (userId: string) => {
+        setFetching(true)
+        const res = await fetchStudentAttendance(userId)
+        if (res.success && res.data) {
+          setReport(res.data)
+        } else {
+          toast.error(res.error || "Failed to load attendance")
+        }
+        setFetching(false)
+      }
+      loadAttendance(user.id)
     }
-  }, [])
+  }, [authLoading, user?.id])
 
-  const loadAttendance = async (userId: string) => {
-    setLoading(true)
-    const res = await fetchStudentAttendance(userId)
-    if (res.success && res.data) {
-      setReport(res.data)
-      processSubjectBreakdown(res.data.records)
-    } else {
-      toast.error(res.error || "Failed to load attendance")
-    }
-    setLoading(false)
-  }
+  const subjectBreakdown = useMemo(() => {
+    if (!report?.records) return []
 
-  const processSubjectBreakdown = (records: any[]) => {
     const subjects = new Map<string, { present: number; total: number }>()
 
-    records.forEach((rec: any) => {
+    report.records.forEach((rec) => {
       const subjectName = rec.session.subject.name
       const stats = subjects.get(subjectName) || { present: 0, total: 0 }
       stats.total++
@@ -57,7 +50,7 @@ export default function StudentAttendancePage() {
       subjects.set(subjectName, stats)
     })
 
-    const breakdown = Array.from(subjects.entries()).map(([subject, stats]) => {
+    return Array.from(subjects.entries()).map(([subject, stats]) => {
       const percentage = Math.round((stats.present / stats.total) * 100)
       let status = "Excellent"
       if (percentage < 75) status = "Critical"
@@ -72,11 +65,9 @@ export default function StudentAttendancePage() {
         status
       }
     })
+  }, [report])
 
-    setSubjectBreakdown(breakdown)
-  }
-
-  if (loading) {
+  if (authLoading || fetching) {
     return (
       <div className="flex items-center justify-center p-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

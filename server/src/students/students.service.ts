@@ -1,16 +1,21 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto, UpdateStudentDto, BulkPromoteDto } from './dto/student.dto';
-import { CMSUserRole } from '@prisma/client';
+import { CMSUserRole, Prisma } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class StudentsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private mailService: MailService,
+    ) { }
 
     async findAll(page: number = 1, limit: number = 10, search?: string, courseId?: string) {
         console.log(`[StudentsService] findAll - page: ${page}, limit: ${limit}, search: ${search}, courseId: ${courseId}`);
         const skip = (page - 1) * limit;
-        const where: any = {
+        const where: Prisma.UserWhereInput = {
             role: CMSUserRole.STUDENT,
         };
 
@@ -119,11 +124,16 @@ export class StudentsService {
             throw new ConflictException('Email already exists');
         }
 
-        return this.prisma.user.create({
+        // Set default password as regno, fallback to a default if regno is missing
+        const rawPassword = dto.regno || 'Student@123';
+        const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+        const student = await this.prisma.user.create({
             data: {
                 name: dto.name,
                 email: dto.email,
                 phone: dto.phone,
+                password: hashedPassword,
                 departmentId: dto.departmentId,
                 role: 'STUDENT',
                 isActive: true,
@@ -141,6 +151,34 @@ export class StudentsService {
                 profile: true,
             },
         });
+
+        // Send credentials email
+        await this.mailService.sendStudentCredentials(dto.email, dto.name, rawPassword);
+
+        return student;
+    }
+
+    async bulkCreate(dtos: CreateStudentDto[]) {
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: [] as { email: string; error: string }[],
+        };
+
+        for (const dto of dtos) {
+            try {
+                await this.create(dto);
+                results.success++;
+            } catch (error) {
+                results.failed++;
+                results.errors.push({
+                    email: dto.email,
+                    error: error instanceof ConflictException ? 'Email already exists' : 'Failed to create student',
+                });
+            }
+        }
+
+        return results;
     }
 
     async update(id: string, dto: UpdateStudentDto) {

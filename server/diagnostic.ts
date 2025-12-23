@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { StudentsService } from './src/students/students.service';
 
 const prisma = new PrismaClient();
-const service = new StudentsService(prisma as any);
+const service = new StudentsService(prisma as any, null as any);
 
 async function check() {
     try {

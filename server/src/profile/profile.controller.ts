@@ -21,7 +21,7 @@ import { CreateProfileDto, UpdateProfileDto } from './dto';
 @Controller('profile')
 @UseGuards(JwtAuthGuard)
 export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
+  constructor(private readonly profileService: ProfileService) { }
 
   /**
    * Create a new profile (Admin only)
@@ -57,6 +57,16 @@ export class ProfileController {
   async findMyProfileWithCourses(@Request() req) {
     const userId = req.user.id;
     return this.profileService.findByUserIdWithCourses(userId);
+  }
+
+  /**
+   * Get current user's profile
+   * GET /profile/me
+   */
+  @Get('me')
+  async findMyProfile(@Request() req) {
+    const userId = req.user.id;
+    return this.profileService.findByUserId(userId);
   }
 
   /**

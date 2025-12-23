@@ -17,9 +17,14 @@ import { StudentsModule } from './students/students.module';
 import { InternalMarksModule } from './internal-marks/internal-marks.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { NoticesModule } from './notices/notices.module';
+import { ExamsModule } from './exams/exams.module';
+import { ReportsModule } from './reports/reports.module';
+import { AssignmentsModule } from './assignments/assignments.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
+    MailModule,
     FcmModule,
     AuthModule,
     PrismaModule,
@@ -35,7 +40,10 @@ import { NoticesModule } from './notices/notices.module';
     StudentsModule,
     InternalMarksModule,
     AttendanceModule,
-    NoticesModule
+    NoticesModule,
+    ExamsModule,
+    ReportsModule,
+    AssignmentsModule
   ],
   controllers: [AppController],
   providers: [AppService],

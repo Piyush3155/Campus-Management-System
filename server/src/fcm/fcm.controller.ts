@@ -69,7 +69,7 @@ class UserNotificationHistoryDto extends PaginationDto {
 @ApiTags('FCM')
 @Controller('fcm')
 export class FcmController {
-  constructor(private readonly fcmService: FcmService) {}
+  constructor(private readonly fcmService: FcmService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post('upsert-token')
@@ -127,7 +127,7 @@ export class FcmController {
           click_action: body.click_action,
           data: body.data,
         },
-        req.user.userId,
+        req.user.id,
       );
     } catch (error) {
       throw new HttpException(
@@ -183,7 +183,7 @@ export class FcmController {
           click_action: body.click_action,
           data: body.data,
         },
-        req.user.userId,
+        req.user.id,
       );
     } catch (error) {
       throw new HttpException(
@@ -222,7 +222,7 @@ export class FcmController {
           click_action: body.click_action,
           data: body.data,
         },
-        req.user.userId,
+        req.user.id,
       );
     } catch (error) {
       throw new HttpException(
@@ -255,17 +255,17 @@ export class FcmController {
   async sendTestNotification(@Request() req) {
     try {
       const result = await this.fcmService.sendNotificationToUser(
-        req.user.userId,
+        req.user.id,
         {
           title: 'Test Notification',
           body: 'This is a test FCM message from Civil Desk!',
           data: {
             type: 'test',
             timestamp: new Date().toISOString(),
-            userId: req.user.userId,
+            userId: req.user.id,
           },
         },
-        req.user.userId,
+        req.user.id,
       );
 
       return {

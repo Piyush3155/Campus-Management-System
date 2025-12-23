@@ -16,19 +16,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fetchTodaySessions, fetchStudentAttendance, fetchSubjectAttendanceReport, fetchStaffAttendanceReport } from "@/app/actions/attendance/main"
+import { StaffAttendanceReport, SubjectAttendanceReport } from "@/app/actions/attendance/types"
 import { fetchStaff } from "@/app/actions/user/main"
+import { User } from "@/app/actions/user/types"
 import { fetchSubjectsByDepartment, fetchSubjects } from "@/app/actions/subject/main"
+import { Subject } from "@/app/actions/subject/types"
 import { toast } from "sonner"
 import { secureApiClient } from "@/lib/secure-api" // We'll use this through actions mostly
 
 export default function AdminAttendancePage() {
     const [loading, setLoading] = useState(true)
-    const [staffList, setStaffList] = useState<any[]>([])
-    const [subjectList, setSubjectList] = useState<any[]>([])
+    const [staffList, setStaffList] = useState<User[]>([])
+    const [subjectList, setSubjectList] = useState<Subject[]>([])
     const [selectedStaffId, setSelectedStaffId] = useState<string>("")
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("")
-    const [staffReport, setStaffReport] = useState<any[]>([])
-    const [subjectReport, setSubjectReport] = useState<any[]>([])
+    const [staffReport, setStaffReport] = useState<StaffAttendanceReport[]>([])
+    const [subjectReport, setSubjectReport] = useState<SubjectAttendanceReport[]>([])
 
     useEffect(() => {
         loadInitialData()

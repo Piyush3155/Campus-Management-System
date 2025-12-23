@@ -15,67 +15,48 @@ interface SessionData {
   roles?: string[];
 }
 
-interface ProfileData {
-  id: string;
-  userId: string;
-  bio?: string;
-  location?: string;
-  regno?: string;
-  gender?: string;
-  address?: string;
-  dob?: string;
-  createdAt: string;
-  updatedAt: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    department?: {
-      id: string;
-      name: string;
-    };
-  };
-}
+import { ProfileData, StudentProfileWithCourses } from '../../../lib/types/profile';
 
-interface CourseData {
-  id: string;
-  title: string;
-  code: string;
-  description?: string;
-  type: string;
-  duration: string;
-  totalSemesters: number;
-  credits?: number;
-  status: string;
-  department: {
-    id: string;
-    name: string;
-  };
-}
+/**
+ * Get current user's profile
+ * Works for all authenticated users
+ */
+export async function getMyProfile(): Promise<{
+  success: boolean;
+  data?: ProfileData;
+  error?: string;
+}> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, ironSessionOptions);
 
-interface StudentProfileWithCourses {
-  id: string;
-  userId: string;
-  bio?: string;
-  location?: string;
-  regno?: string;
-  gender?: string;
-  address?: string;
-  dob?: string;
-  createdAt: string;
-  updatedAt: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    department?: {
-      id: string;
-      name: string;
+    if (!session.isLoggedIn || !session.accessToken) {
+      return {
+        success: false,
+        error: 'Authentication required',
+      };
+    }
+
+    const response = await secureApiClient.get<ProfileData>('/profile/me');
+
+    if (response.error) {
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    return {
+      success: true,
+      data: response.data,
     };
-  };
-  courses: CourseData[];
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch profile',
+    };
+  }
 }
 
 /**
@@ -131,10 +112,10 @@ export async function getStudentProfileWithCourses(): Promise<{
 }
 
 /**
- * Update current student's profile
- * Only works for authenticated students
+ * Update current user's profile
+ * Works for all authenticated users
  */
-export async function updateStudentProfile(profileData: {
+export async function updateMyProfile(profileData: {
   bio?: string;
   location?: string;
   regno?: string;
@@ -158,13 +139,6 @@ export async function updateStudentProfile(profileData: {
       };
     }
 
-    // Check if user is a student
-    if (session.roles?.[0] !== 'STUDENT') {
-      return {
-        success: false,
-        error: 'This endpoint is only available for students',
-      };
-    }
 
     // Convert dob to ISO string if provided
     const updateData = {
@@ -193,13 +167,18 @@ export async function updateStudentProfile(profileData: {
       data: response.data,
     };
   } catch (error) {
-    console.error('Error updating student profile:', error);
+    console.error('Error updating profile:', error);
     return {
       success: false,
       error: 'Failed to update profile',
     };
   }
 }
+
+/**
+ * Legacy alias for updateMyProfile
+ */
+export const updateStudentProfile = updateMyProfile;
 
 /**
  * Get current student's regno

@@ -46,6 +46,13 @@ export class StudentsController {
         return this.studentsService.create(dto);
     }
 
+    @Post('bulk')
+    @Roles('ADMIN')
+    @ApiOperation({ summary: 'Bulk create students' })
+    bulkCreate(@Body() dtos: CreateStudentDto[]) {
+        return this.studentsService.bulkCreate(dtos);
+    }
+
     @Patch(':id')
     @Roles('ADMIN')
     @ApiOperation({ summary: 'Update student details' })

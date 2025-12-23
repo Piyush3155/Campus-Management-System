@@ -1,5 +1,6 @@
 import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -7,8 +8,8 @@ export class UsersService {
 
   async findAll(page: number = 1, limit: number = 10, role?: string, departmentId?: string) {
     const skip = (page - 1) * limit;
-    const where: any = {};
-    if (role) where.role = role.toUpperCase();
+    const where: Prisma.UserWhereInput = {};
+    if (role) where.role = role.toUpperCase() as any; // Cast to any because role is enum in Prisma but string here
     if (departmentId) where.departmentId = departmentId;
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -165,7 +166,7 @@ export class UsersService {
     password: string;
     phone?: string;
     createdById?: string;
-  }) {
+  }): Promise<User> {
     const { username, email } = data;
 
     // Check for existing user
@@ -197,15 +198,6 @@ export class UsersService {
         role: 'STAFF',
         isActive: true,
         createdById: data.createdById,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        username: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
       },
     });
   }
@@ -304,20 +296,21 @@ export class UsersService {
           role: 'STAFF', // Default to STAFF for manual creation
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Handle Prisma unique constraint error as a conflict
-      if (err?.code === 'P2002') {
-        const target = err?.meta?.target || [];
-        if (Array.isArray(target) && target.includes('username')) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const target = (err.meta?.target as string[]) || [];
+        if (target.includes('username')) {
           throw new ConflictException('Username already exists');
         }
-        if (Array.isArray(target) && target.includes('email')) {
+        if (target.includes('email')) {
           throw new ConflictException('Email already exists');
         }
         throw new ConflictException('Duplicate value for unique field');
       }
       // Re-throw other errors as bad requests
-      throw new BadRequestException(err?.message || 'Failed to create user');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create user';
+      throw new BadRequestException(errorMessage);
     }
   }
 

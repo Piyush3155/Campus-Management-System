@@ -93,6 +93,24 @@ export async function createStudent(data: CreateStudentData): Promise<ActionResu
 }
 
 /**
+ * Bulk create students (Admin only)
+ */
+export async function bulkCreateStudents(data: CreateStudentData[]): Promise<ActionResult<{ success: number; failed: number; errors: any[] }>> {
+    try {
+        const response = await secureApiClient.post<{ success: number; failed: number; errors: any[] }>('/students/bulk', data);
+
+        if (response.error) {
+            return { success: false, error: response.error };
+        }
+
+        return { success: true, data: response.data! };
+    } catch (error) {
+        console.error('Bulk create students error:', error);
+        return { success: false, error: 'Failed to bulk create students' };
+    }
+}
+
+/**
  * Update student details (Admin only)
  */
 export async function updateStudent(id: string, data: UpdateStudentData): Promise<ActionResult<Student>> {

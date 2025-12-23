@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import * as admin from 'firebase-admin';
 import { CredentialLoginDto, FirebaseLoginDto, CreateStaffDto, AuthResponse } from './dto';
+import { User } from '@prisma/client';
 
 // Initialize Firebase Admin SDK (only once)
 if (!admin.apps.length) {
@@ -29,7 +30,7 @@ export class AuthService {
   /**
    * Validate Admin/Staff credentials
    */
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string): Promise<User | null> {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
@@ -53,8 +54,7 @@ export class AuthService {
       throw new ForbiddenException('Account is deactivated');
     }
 
-    const { password: _, ...result } = user;
-    return result;
+    return user;
   }
 
   /**
@@ -122,7 +122,7 @@ export class AuthService {
   /**
    * Create Staff by Admin
    */
-  async createStaff(createStaffDto: CreateStaffDto, adminId: string): Promise<any> {
+  async createStaff(createStaffDto: CreateStaffDto, adminId: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(createStaffDto.password, 12);
 
     return this.usersService.createStaff({
@@ -135,7 +135,7 @@ export class AuthService {
   /**
    * Generate JWT and auth response
    */
-  private async generateAuthResponse(user: any): Promise<AuthResponse> {
+  private async generateAuthResponse(user: User): Promise<AuthResponse> {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -148,9 +148,10 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        username: user.username,
+        username: user.username ?? undefined,
         role: user.role,
         isActive: user.isActive,
+        profileImageUrl: user.profileImageUrl ?? undefined,
       },
     };
   }

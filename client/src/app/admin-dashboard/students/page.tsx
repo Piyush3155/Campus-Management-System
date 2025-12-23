@@ -9,9 +9,12 @@ import {
     ArrowRight,
     MoreHorizontal,
     Plus,
-    AlertCircle
+    AlertCircle,
+    Download,
+    Upload
 } from "lucide-react"
 import Link from "next/link"
+import Papa from "papaparse"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -66,18 +69,20 @@ import {
     DialogTrigger,
     DialogFooter,
 } from "@/components/ui/dialog"
-import { fetchStudents, fetchStudentStats, bulkPromoteStudents, createStudent, updateStudent } from "@/app/actions/student/main"
+import { fetchStudents, fetchStudentStats, bulkPromoteStudents, createStudent, updateStudent, bulkCreateStudents } from "@/app/actions/student/main"
 import { Student, StudentStats, CreateStudentData } from "@/app/actions/student/types"
 import { toast } from "sonner"
 import { fetchCourses } from "@/app/actions/course/main"
 import type { Course } from "@/app/actions/course/types"
+import { fetchDepartments } from "@/app/actions/setup/main"
+import type { Department } from "@/app/actions/setup/types"
 
 export default function StudentsPage() {
     const [students, setStudents] = React.useState<Student[]>([])
     const [stats, setStats] = React.useState<StudentStats | null>(null)
     const [courses, setCourses] = React.useState<Course[]>([])
+    const [departments, setDepartments] = React.useState<Department[]>([])
     const [loading, setLoading] = React.useState(true)
-    const [error, setError] = React.useState<string | null>(null)
     const [selectedStudents, setSelectedStudents] = React.useState<string[]>([])
     const [searchTerm, setSearchTerm] = React.useState("")
     const [selectedCourse, setSelectedCourse] = React.useState("all")
@@ -92,14 +97,21 @@ export default function StudentsPage() {
         cgpa: 0
     })
     const [isSubmittingProfile, setIsSubmittingProfile] = React.useState(false)
+    const [isTemplateDialogOpen, setIsTemplateDialogOpen] = React.useState(false)
+    const [templateConfig, setTemplateConfig] = React.useState({
+        departmentId: "",
+        semester: 1,
+        section: "A"
+    })
 
-    const loadData = async () => {
+    const loadData = React.useCallback(async () => {
         try {
             setLoading(true)
-            const [studentsRes, statsRes, coursesRes] = await Promise.all([
+            const [studentsRes, statsRes, coursesRes, deptsRes] = await Promise.all([
                 fetchStudents(1, 50, searchTerm, selectedCourse === "all" ? undefined : selectedCourse),
                 fetchStudentStats(),
-                fetchCourses()
+                fetchCourses(),
+                fetchDepartments()
             ])
 
             if (studentsRes.success && studentsRes.data) {
@@ -114,20 +126,24 @@ export default function StudentsPage() {
                 setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : [])
             }
 
+            if (deptsRes.success && deptsRes.data) {
+                setDepartments(Array.isArray(deptsRes.data) ? deptsRes.data : [])
+            }
+
             if (!studentsRes.success) {
-                setError(studentsRes.error || "Failed to load students")
+                toast.error(studentsRes.error || "Failed to load students")
             }
         } catch (err) {
-            setError("An unexpected error occurred")
+            toast.error("An unexpected error occurred")
             console.error(err)
         } finally {
             setLoading(false)
         }
-    }
+    }, [searchTerm, selectedCourse])
 
     React.useEffect(() => {
         loadData()
-    }, [searchTerm, selectedCourse])
+    }, [loadData])
 
     const toggleStudent = (id: string) => {
         setSelectedStudents(prev =>
@@ -224,6 +240,76 @@ export default function StudentsPage() {
         }
     }
 
+    const handleDownloadTemplate = () => {
+        const headers = ["name", "email", "phone", "departmentId", "semester", "section", "regno"]
+        const sampleRow = [
+            "John Doe",
+            "john@student.edu",
+            "+1234567890",
+            templateConfig.departmentId,
+            templateConfig.semester,
+            templateConfig.section,
+            "REG-001"
+        ]
+        const csvContent = headers.join(",") + "\n" + sampleRow.join(",") + "\n"
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement("a")
+        const url = URL.createObjectURL(blob)
+        link.setAttribute("href", url)
+        link.setAttribute("download", `student_template_${templateConfig.section}_sem${templateConfig.semester}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        setIsTemplateDialogOpen(false)
+    }
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const data = results.data as Record<string, string>[]
+                const studentsToCreate: CreateStudentData[] = data.map(row => ({
+                    name: row.name,
+                    email: row.email,
+                    phone: row.phone || undefined,
+                    departmentId: row.departmentId || undefined,
+                    semester: row.semester ? parseInt(row.semester) : 1,
+                    section: row.section || 'A',
+                    regno: row.regno || undefined
+                }))
+
+                if (studentsToCreate.length === 0) {
+                    toast.error("No data found in CSV")
+                    return
+                }
+
+                const loadingToast = toast.loading(`Importing ${studentsToCreate.length} students...`)
+                const res = await bulkCreateStudents(studentsToCreate)
+                toast.dismiss(loadingToast)
+
+                if (res.success && res.data) {
+                    toast.success(`Import complete: ${res.data.success} success, ${res.data.failed} failed`)
+                    if (res.data.errors.length > 0) {
+                        console.error("Import errors:", res.data.errors)
+                    }
+                    loadData()
+                } else {
+                    toast.error(res.error || "Failed to import students")
+                }
+            },
+            error: (error) => {
+                toast.error(`Error parsing CSV: ${error.message}`)
+            }
+        })
+        // Reset input
+        e.target.value = ""
+    }
+
     if (loading && students.length === 0) {
         return <div className="flex items-center justify-center h-64">Loading students...</div>
     }
@@ -240,6 +326,80 @@ export default function StudentsPage() {
                     <p className="text-muted-foreground">Directory, admissions, and academic records.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <Download className="mr-2 h-4 w-4" /> Template
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Download Template</DialogTitle>
+                                <DialogDescription>
+                                    Select the department, semester, and section for the template.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="template-dept">Department</Label>
+                                    <Select 
+                                        value={templateConfig.departmentId} 
+                                        onValueChange={(val) => setTemplateConfig({...templateConfig, departmentId: val})}
+                                    >
+                                        <SelectTrigger id="template-dept">
+                                            <SelectValue placeholder="Select Department" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Array.isArray(departments) && departments.map(dept => (
+                                                <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="template-sem">Semester</Label>
+                                        <Input 
+                                            id="template-sem" 
+                                            type="number" 
+                                            min={1} 
+                                            max={8} 
+                                            value={templateConfig.semester}
+                                            onChange={(e) => setTemplateConfig({...templateConfig, semester: parseInt(e.target.value)})}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="template-sec">Section/Div</Label>
+                                        <Input 
+                                            id="template-sec" 
+                                            placeholder="A" 
+                                            value={templateConfig.section}
+                                            onChange={(e) => setTemplateConfig({...templateConfig, section: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={handleDownloadTemplate} disabled={!templateConfig.departmentId}>Download</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <div className="relative">
+                        <Input
+                            type="file"
+                            accept=".csv"
+                            className="hidden"
+                            id="csv-upload"
+                            onChange={handleFileUpload}
+                        />
+                        <Button variant="outline" asChild>
+                            <label htmlFor="csv-upload" className="cursor-pointer">
+                                <Upload className="mr-2 h-4 w-4" /> Bulk Import
+                            </label>
+                        </Button>
+                    </div>
                     <Button variant="outline">
                         <Filter className="mr-2 h-4 w-4" /> Filter
                     </Button>
@@ -271,14 +431,14 @@ export default function StudentsPage() {
                                         <Input id="phone" name="phone" placeholder="+1234567890" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="departmentId">Course/Dept</Label>
+                                        <Label htmlFor="departmentId">Department</Label>
                                         <Select name="departmentId">
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select Course" />
+                                                <SelectValue placeholder="Select Department" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {Array.isArray(courses) && courses.map(course => (
-                                                    <SelectItem key={course.id} value={course.id}>{course.code}</SelectItem>
+                                                {Array.isArray(departments) && departments.map(dept => (
+                                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -372,7 +532,7 @@ export default function StudentsPage() {
                                     <TableRow>
                                         <TableHead className="w-[80px]">Image</TableHead>
                                         <TableHead>Name & ID</TableHead>
-                                        <TableHead>Course</TableHead>
+                                        <TableHead>Department</TableHead>
                                         <TableHead>Semester</TableHead>
                                         <TableHead>Section</TableHead>
                                         <TableHead>Status</TableHead>
