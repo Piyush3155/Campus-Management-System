@@ -3,6 +3,8 @@ import { QuickInsights } from "@/components/dashboard/quick-insights"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { getAdminDashboardData } from "@/lib/dashboard-api"
 
+export const dynamic = 'force-dynamic'
+
 export default async function Page() {
   const data = await getAdminDashboardData();
 

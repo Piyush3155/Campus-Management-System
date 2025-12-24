@@ -3,6 +3,8 @@ import { StaffQuickActions } from "@/components/staff-dashboard/quick-actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getStaffDashboardData } from "@/lib/dashboard-api"
 
+export const dynamic = 'force-dynamic'
+
 export default async function StaffDashboardPage() {
   const data = await getStaffDashboardData();
 

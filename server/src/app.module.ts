@@ -22,6 +22,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { AIModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -45,7 +46,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ExamsModule,
     ReportsModule,
     AssignmentsModule,
-    DashboardModule
+    DashboardModule,
+    AIModule
   ],
   controllers: [AppController],
   providers: [AppService],

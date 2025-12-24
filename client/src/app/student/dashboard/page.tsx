@@ -1,26 +1,34 @@
 import React from "react"
 import { 
   CheckCircle2, 
-  Clock, 
   BookOpen, 
   Award, 
   FileText, 
   ChevronRight,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getStudentDashboardData } from "@/lib/dashboard-api"
+import { getStudentDashboardData, StudentDashboardData } from "@/lib/dashboard-api"
+
+export const dynamic = 'force-dynamic'
+
+type ActionItem = {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
+  value: string;
+}
 
 export default async function StudentDashboard() {
-  const data = await getStudentDashboardData();
-  
-  const iconMap: Record<string, any> = {
-    "Attendance": CheckCircle2,
-    "Assignments": FileText,
-    "Exams": Award,
-    "Subjects": BookOpen,
-  }
+  const data: StudentDashboardData = await getStudentDashboardData();
 
-  const mainActions = data.stats.map((stat: { label: string; value: string }) => ({
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    'Attendance': CheckCircle2,
+    'Assignments': FileText,
+    'Subjects': BookOpen,
+    'Internal Marks': Award,
+  };
+
+  const mainActions: ActionItem[] = data.stats.map((stat) => ({
     label: stat.label,
     icon: iconMap[stat.label] || CheckCircle2,
     iconColor: "text-primary",
@@ -43,7 +51,7 @@ export default async function StudentDashboard() {
 
       {/* Main Stats Grid */}
       <section className="grid grid-cols-2 gap-4">
-        {mainActions.map((action: { label: string; icon: any; iconColor: string; value: string }, i: number) => (
+        {mainActions.map((action, i) => (
             <div key={i} className="p-5 rounded-3xl bg-card border border-border/50 active:scale-95 transition-all cursor-pointer shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                     <action.icon className={`h-4 w-4 ${action.iconColor} stroke-[2.5]`} />
@@ -59,7 +67,7 @@ export default async function StudentDashboard() {
       <section className="space-y-4">
         <h3 className="text-lg font-bold text-foreground">Upcoming Exams</h3>
         <div className="space-y-3">
-            {data.upcomingExams.map((task: any, i: number) => (
+            {data.upcomingExams.map((task, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 rounded-3xl bg-card border border-border active:bg-muted/50 transition-colors cursor-pointer shadow-sm">
                     <div className="h-10 w-10 rounded-2xl bg-muted flex items-center justify-center shrink-0">
                         <Award className="h-5 w-5 text-muted-foreground" />

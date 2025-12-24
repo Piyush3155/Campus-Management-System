@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { auth } from "../../lib/firebase"
@@ -335,4 +335,10 @@ function LoginContent() {
   )
 }
 
-export default LoginContent
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
+  )
+}
