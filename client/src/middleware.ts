@@ -17,6 +17,24 @@ interface SessionData {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Handle root path redirects
+  if (pathname === '/') {
+    try {
+      const session = await getIronSession<SessionData>(request, new NextResponse(), ironSessionOptions)
+      if (!session.isLoggedIn) {
+        return NextResponse.redirect(new URL('/login', request.url))
+      } else {
+        // Redirect to dashboard based on primary role
+        const primaryRole = session.roles?.[0]
+        const dashboardUrl = primaryRole === 'ADMIN' ? '/admin-dashboard' : primaryRole === 'STAFF' ? '/staff/dashboard' : '/student/dashboard'
+        return NextResponse.redirect(new URL(dashboardUrl, request.url))
+      }
+    } catch (error) {
+      console.error('Middleware error on root redirect:', error)
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+  }
+
   // Public routes that don't require authentication
   const publicRoutes = ['/login', '/signup', '/forgot-password', '/api']
   const isPublicRoute = publicRoutes.some(route =>
@@ -48,13 +66,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
 
-    // ...existing code...
-
     if (pathname.startsWith('/student') && !session.roles?.includes('STUDENT')) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
-
-    // ...existing code...
 
     // Handle dashboard redirects
     if (pathname.startsWith('/dashboard')) {

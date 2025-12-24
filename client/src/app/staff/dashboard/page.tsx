@@ -1,15 +1,18 @@
 import { StaffStatsCards } from "@/components/staff-dashboard/stats-cards"
 import { StaffQuickActions } from "@/components/staff-dashboard/quick-actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getStaffDashboardData } from "@/lib/dashboard-api"
 
-export default function StaffDashboardPage() {
+export default async function StaffDashboardPage() {
+  const data = await getStaffDashboardData();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Staff Dashboard</h1>
       </div>
       
-      <StaffStatsCards />
+      <StaffStatsCards stats={data.stats} />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4 bg-card/50 backdrop-blur-sm border-muted/50">
@@ -28,15 +31,11 @@ export default function StaffDashboardPage() {
         
         <Card className="col-span-3 bg-card/50 backdrop-blur-sm border-muted/50">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Today's Schedule</CardTitle>
+            <CardTitle className="text-xl font-semibold">Today&apos;s Schedule</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-                {[
-                    { time: "09:00 AM", subject: "Mathematics", class: "Sec A - Year 1", status: "Completed" },
-                    { time: "11:30 AM", subject: "Physics", class: "Sec B - Year 2", status: "Ongoing" },
-                    { time: "02:00 PM", subject: "Computer Science", class: "Sec C - Year 1", status: "Upcoming" },
-                ].map((item, i) => (
+                {data.schedule.map((item: { subject: string; class: string; time: string; status: string }, i: number) => (
                     <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-muted/20">
                         <div className="space-y-1">
                             <p className="font-medium text-sm">{item.subject}</p>
@@ -54,6 +53,9 @@ export default function StaffDashboardPage() {
                         </div>
                     </div>
                 ))}
+                {data.schedule.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No classes scheduled for today</p>
+                )}
             </div>
           </CardContent>
         </Card>

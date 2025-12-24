@@ -28,8 +28,8 @@ export default function AssignmentsPage() {
     setLoading(false)
   }
 
-  const activeCount = assignments.length // Simplified
-  const pendingCount = 0 // Needs more logic if we want real stats here
+  const activeCount = assignments.length
+  const pendingCount = 0 // Still placeholder as we don't have review status easily available without nested fetch
 
   return (
     <div className="space-y-6">

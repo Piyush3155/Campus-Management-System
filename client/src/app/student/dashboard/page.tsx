@@ -1,5 +1,3 @@
-"use client"
-
 import React from "react"
 import { 
   CheckCircle2, 
@@ -10,32 +8,42 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getStudentDashboardData } from "@/lib/dashboard-api"
 
-export default function StudentDashboard() {
-  const mainActions = [
-    { label: "Attendance", icon: CheckCircle2, iconColor: "text-primary", value: "92%" },
-    { label: "Assignments", icon: FileText, iconColor: "text-primary", value: "4 Pending" },
-    { icon: Award, label: "Exams", iconColor: "text-primary", value: "2 Soon" },
-    { icon: BookOpen, label: "Subjects", iconColor: "text-primary", value: "6 Total" },
-  ]
+export default async function StudentDashboard() {
+  const data = await getStudentDashboardData();
+  
+  const iconMap: Record<string, any> = {
+    "Attendance": CheckCircle2,
+    "Assignments": FileText,
+    "Exams": Award,
+    "Subjects": BookOpen,
+  }
+
+  const mainActions = data.stats.map((stat: { label: string; value: string }) => ({
+    label: stat.label,
+    icon: iconMap[stat.label] || CheckCircle2,
+    iconColor: "text-primary",
+    value: stat.value
+  }))
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
       {/* Welcome Header */}
       <section className="flex items-center justify-between">
         <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">Hey, Rahul 👋</h2>
-            <p className="text-muted-foreground text-sm font-medium">Monday, 18 December</p>
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">Hey, {data.name.split(' ')[0]} 👋</h2>
+            <p className="text-muted-foreground text-sm font-medium">{new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <Avatar className="h-12 w-12 border border-border shadow-sm">
-            <AvatarImage src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=1974&auto=format&fit=crop" />
-            <AvatarFallback>RB</AvatarFallback>
+            <AvatarImage src="" />
+            <AvatarFallback>{data.name.substring(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       </section>
 
       {/* Main Stats Grid */}
       <section className="grid grid-cols-2 gap-4">
-        {mainActions.map((action, i) => (
+        {mainActions.map((action: { label: string; icon: any; iconColor: string; value: string }, i: number) => (
             <div key={i} className="p-5 rounded-3xl bg-card border border-border/50 active:scale-95 transition-all cursor-pointer shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                     <action.icon className={`h-4 w-4 ${action.iconColor} stroke-[2.5]`} />
@@ -49,15 +57,12 @@ export default function StudentDashboard() {
 
       {/* Upcoming Deadlines */}
       <section className="space-y-4">
-        <h3 className="text-lg font-bold text-foreground">Deadlines</h3>
+        <h3 className="text-lg font-bold text-foreground">Upcoming Exams</h3>
         <div className="space-y-3">
-            {[
-                { title: "Quantum Physics Report", date: "Due in 2 Days", type: "Assignment" },
-                { title: "Mid-Term Project", date: "Due in 5 Days", type: "Project" },
-            ].map((task, i) => (
+            {data.upcomingExams.map((task: any, i: number) => (
                 <div key={i} className="flex items-center gap-4 p-4 rounded-3xl bg-card border border-border active:bg-muted/50 transition-colors cursor-pointer shadow-sm">
                     <div className="h-10 w-10 rounded-2xl bg-muted flex items-center justify-center shrink-0">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <Award className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-bold text-foreground truncate">{task.title}</h4>
@@ -68,6 +73,9 @@ export default function StudentDashboard() {
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
                 </div>
             ))}
+            {data.upcomingExams.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">No upcoming exams</p>
+            )}
         </div>
       </section>
 

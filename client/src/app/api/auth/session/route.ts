@@ -75,14 +75,7 @@ export async function POST(request: NextRequest) {
     if (action === 'logout') {
       const response = NextResponse.json({ success: true });
       const session = await getIronSession<SessionData>(request, response, ironSessionOptions);
-      session.isLoggedIn = false;
-      session.userId = undefined;
-      session.accessToken = undefined;
-      session.username = undefined;
-      session.name = undefined;
-      session.email = undefined;
-      session.roles = undefined;
-      await session.save();
+      await session.destroy();
       return response;
     }
 

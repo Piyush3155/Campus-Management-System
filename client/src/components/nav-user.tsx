@@ -28,6 +28,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/context/AuthContext"
 
 export function NavUser({
   user,
@@ -39,6 +40,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const { logout } = useAuth()
 
   return (
     <SidebarMenu>
@@ -100,9 +102,8 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={async () => {
                 try {
-                    const { auth } = await import('@/lib/firebase');
-                    await auth.signOut();
-                    window.location.href = '/login'; 
+                    await logout();
+                    window.location.href = '/login';
                 } catch (error) {
                     console.error("Logout failed", error);
                 }

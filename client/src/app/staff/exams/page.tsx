@@ -1,12 +1,43 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExamSchedule } from "@/components/staff-dashboard/exam-schedule"
 import { EnterMarks } from "@/components/staff-dashboard/enter-marks"
 import { ClassResultsSummary } from "@/components/staff-dashboard/results-summary"
-import { ClipboardList, Calendar, PieChart, PenTool } from "lucide-react"
+import { ClipboardList, Calendar, PieChart, PenTool, Loader2 } from "lucide-react"
+import { fetchExams, fetchResultOverview } from "@/app/actions/exams/main"
+import { Exam, ResultOverview } from "@/app/actions/exams/types"
+import { toast } from "sonner"
 
 export default function ExamsPage() {
+  const [exams, setExams] = useState<Exam[]>([])
+  const [results, setResults] = useState<ResultOverview[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [examsRes, resultsRes] = await Promise.all([
+        fetchExams(),
+        fetchResultOverview()
+      ])
+
+      if (examsRes.success) setExams(examsRes.data || [])
+      if (resultsRes.success) setResults(resultsRes.data || [])
+
+      if (!examsRes.success) toast.error(examsRes.error || "Failed to load exams")
+      if (!resultsRes.success) toast.error(resultsRes.error || "Failed to load results")
+    } catch (error) {
+      toast.error("An unexpected error occurred")
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -28,7 +59,11 @@ export default function ExamsPage() {
         </TabsList>
 
         <TabsContent value="schedule" className="space-y-4">
-          <ExamSchedule />
+          {loading ? (
+            <div className="flex justify-center p-10"><Loader2 className="animate-spin h-8 w-8 text-blue-600" /></div>
+          ) : (
+            <ExamSchedule exams={exams} />
+          )}
         </TabsContent>
 
         <TabsContent value="entry" className="space-y-4">
@@ -36,15 +71,11 @@ export default function ExamsPage() {
         </TabsContent>
 
         <TabsContent value="summary" className="space-y-4">
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-bold italic">Academic performance overview</h2>
-                    <p className="text-sm text-muted-foreground">Summary of results for the current semester exams.</p>
-                </div>
-            </div>
-            <ClassResultsSummary />
-          </div>
+          {loading ? (
+            <div className="flex justify-center p-10"><Loader2 className="animate-spin h-8 w-8 text-blue-600" /></div>
+          ) : (
+            <ClassResultsSummary results={results} />
+          )}
         </TabsContent>
       </Tabs>
     </div>

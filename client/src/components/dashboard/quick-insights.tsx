@@ -22,41 +22,24 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 
-const studentData = [
-  { name: "CS", total: 450 },
-  { name: "Eng", total: 300 },
-  { name: "Math", total: 200 },
-  { name: "Sci", total: 350 },
-  { name: "Arts", total: 150 },
-]
+interface DataItem {
+  name: string
+  total: number
+}
 
-const staffData = [
-  { name: "CS", total: 20 },
-  { name: "Eng", total: 15 },
-  { name: "Math", total: 10 },
-  { name: "Sci", total: 18 },
-  { name: "Arts", total: 8 },
-]
+interface EventItem {
+  title: string
+  date: string
+  type: string
+}
 
-const upcomingEvents = [
-  {
-    title: "Mid-Term Exams",
-    date: "Dec 24, 2025",
-    type: "Exam",
-  },
-  {
-    title: "Staff Meeting",
-    date: "Dec 26, 2025",
-    type: "Meeting",
-  },
-  {
-    title: "New Year Holiday",
-    date: "Jan 01, 2026",
-    type: "Holiday",
-  },
-]
+interface QuickInsightsProps {
+  studentData: DataItem[]
+  staffData: DataItem[]
+  upcomingEvents: EventItem[]
+}
 
-export function QuickInsights() {
+export function QuickInsights({ studentData, staffData, upcomingEvents }: QuickInsightsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
       <Card className="col-span-4">

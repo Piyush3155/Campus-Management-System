@@ -61,6 +61,7 @@ export function CreateAssignment({ onSuccess }: CreateAssignmentProps) {
     setLoading(true)
     const result = await createAssignment({
       ...formData,
+      subjectId: formData.subjectId || undefined,
       semester: parseInt(formData.semester),
     })
 

@@ -8,9 +8,11 @@ export class AssignmentsService {
     constructor(private prisma: PrismaService) { }
 
     async create(createAssignmentDto: CreateAssignmentDto, authorId: string) {
+        const { subjectId, ...rest } = createAssignmentDto;
         return this.prisma.assignment.create({
             data: {
-                ...createAssignmentDto,
+                ...rest,
+                subjectId: subjectId || null,
                 dueDate: new Date(createAssignmentDto.dueDate),
                 authorId,
             },
