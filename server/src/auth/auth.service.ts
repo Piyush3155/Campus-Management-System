@@ -1,31 +1,42 @@
-import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ForbiddenException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { getFirebaseAdmin } from '../firebase/firebase-admin.provider';
 import * as bcrypt from 'bcryptjs';
 import * as admin from 'firebase-admin';
-import { CredentialLoginDto, FirebaseLoginDto, CreateStaffDto, AuthResponse } from './dto';
+import {
+  CredentialLoginDto,
+  FirebaseLoginDto,
+  CreateStaffDto,
+  AuthResponse,
+} from './dto';
 import { User } from '@prisma/client';
-
-// Initialize Firebase Admin SDK (only once)
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
 
 @Injectable()
 export class AuthService {
-  // Configurable college email domain
-  private readonly allowedEmailDomain = process.env.ALLOWED_EMAIL_DOMAIN || '@college.edu';
+  /**
+   * Allowed college email domain for students
+   */
+  private readonly allowedEmailDomain =
+    process.env.ALLOWED_EMAIL_DOMAIN || '@college.edu';
+  private readonly firebaseAdmin: typeof admin;
 
   constructor(
-    private usersService: UsersService,
-    private jwtService: JwtService,
-  ) { }
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {
+    this.firebaseAdmin = getFirebaseAdmin(); // ✅ SAFE
+  }
+
+  // ===========================================================================
+  // ADMIN / STAFF AUTH
+  // ===========================================================================
 
   /**
    * Validate Admin/Staff credentials
@@ -33,23 +44,15 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<User | null> {
     const user = await this.usersService.findByEmail(email);
 
-    if (!user) {
+    if (!user || !user.password) {
       return null;
     }
 
-    // Validate auth method - Only Admin/Staff/Student are valid roles
-    // Removed restriction for students to only use Google
-
-    // Admin/Staff must have password
-    if (!user.password) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    if (!(await bcrypt.compare(password, user.password))) {
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       return null;
     }
 
-    // Check if user is active
     if (!user.isActive) {
       throw new ForbiddenException('Account is deactivated');
     }
@@ -58,10 +61,15 @@ export class AuthService {
   }
 
   /**
-   * Admin/Staff Login with credentials
+   * Admin/Staff login
    */
-  async loginWithCredentials(loginDto: CredentialLoginDto): Promise<AuthResponse> {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
+  async loginWithCredentials(
+    loginDto: CredentialLoginDto,
+  ): Promise<AuthResponse> {
+    const user = await this.validateUser(
+      loginDto.email,
+      loginDto.password,
+    );
 
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -70,38 +78,46 @@ export class AuthService {
     return this.generateAuthResponse(user);
   }
 
+  // ===========================================================================
+  // STUDENT AUTH (FIREBASE)
+  // ===========================================================================
+
   /**
-   * Student Login with Firebase (Google)
+   * Student login with Firebase (Google)
    */
-  async loginWithFirebase(loginDto: FirebaseLoginDto): Promise<AuthResponse> {
+  async loginWithFirebase(
+    loginDto: FirebaseLoginDto,
+  ): Promise<AuthResponse> {
     try {
-      // Verify Firebase ID token
-      const decodedToken = await admin.auth().verifyIdToken(loginDto.idToken);
+      const decodedToken = await admin
+        .auth()
+        .verifyIdToken(loginDto.idToken);
+
       const { uid, email, name, picture } = decodedToken;
 
       if (!email) {
         throw new BadRequestException('Email is required');
       }
 
-      // Validate email domain (only college students allowed)
       if (!email.endsWith(this.allowedEmailDomain)) {
-        throw new ForbiddenException(`Only ${this.allowedEmailDomain} email addresses are allowed`);
+        throw new ForbiddenException(
+          `Only ${this.allowedEmailDomain} email addresses are allowed`,
+        );
       }
 
-      // Check if user exists
       let user = await this.usersService.findByFirebaseUid(uid);
 
       if (user) {
-        // Existing user - validate role
         if (user.role !== 'STUDENT') {
-          throw new ForbiddenException('Invalid auth method for this account');
+          throw new ForbiddenException(
+            'Invalid authentication method for this account',
+          );
         }
 
         if (!user.isActive) {
           throw new ForbiddenException('Account is deactivated');
         }
       } else {
-        // First-time login - create student account
         user = await this.usersService.createStudent({
           firebaseUid: uid,
           email,
@@ -112,30 +128,51 @@ export class AuthService {
 
       return this.generateAuthResponse(user);
     } catch (error) {
-      if (error instanceof ForbiddenException || error instanceof BadRequestException) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
+
       throw new UnauthorizedException('Invalid Firebase token');
     }
   }
 
+  // ===========================================================================
+  // STAFF MANAGEMENT
+  // ===========================================================================
+
   /**
-   * Create Staff by Admin
+   * Create Staff (Admin only)
    */
-  async createStaff(createStaffDto: CreateStaffDto, adminId: string): Promise<User> {
-    const hashedPassword = await bcrypt.hash(createStaffDto.password, 12);
+  async createStaff(
+    createStaffDto: CreateStaffDto,
+    adminId: string,
+  ): Promise<User> {
+    const { name, username, email, password, phone, departmentId } =
+      createStaffDto;
+
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     return this.usersService.createStaff({
-      ...createStaffDto,
+      name,
+      username,
+      email,
       password: hashedPassword,
+      phone,
+      departmentId,
       createdById: adminId,
     });
   }
 
-  /**
-   * Generate JWT and auth response
-   */
-  private async generateAuthResponse(user: User): Promise<AuthResponse> {
+  // ===========================================================================
+  // JWT HELPERS
+  // ===========================================================================
+
+  private async generateAuthResponse(
+    user: User,
+  ): Promise<AuthResponse> {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -156,12 +193,12 @@ export class AuthService {
     };
   }
 
-  /**
-   * Refresh token
-   */
   async refresh(token: string): Promise<AuthResponse> {
     try {
-      const payload = this.jwtService.verify(token, { ignoreExpiration: true });
+      const payload = this.jwtService.verify(token, {
+        ignoreExpiration: true,
+      });
+
       const user = await this.usersService.findById(payload.sub);
 
       if (!user) {
@@ -181,10 +218,7 @@ export class AuthService {
     }
   }
 
-  /**
-   * Validate JWT token and return user
-   */
-  async validateToken(token: string): Promise<any> {
+  async validateToken(token: string): Promise<User | null> {
     try {
       const payload = this.jwtService.verify(token);
       const user = await this.usersService.findById(payload.sub);

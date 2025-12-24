@@ -165,8 +165,10 @@ export class UsersService {
     email: string;
     password: string;
     phone?: string;
+    departmentId?: string;
     createdById?: string;
   }): Promise<User> {
+    console.log('DEBUG: Creating staff with data:', JSON.stringify({ ...data, password: '[REDACTED]' }, null, 2));
     const { username, email } = data;
 
     // Check for existing user
@@ -198,6 +200,7 @@ export class UsersService {
         role: 'STAFF',
         isActive: true,
         createdById: data.createdById,
+        departmentId: data.departmentId,
       },
     });
   }

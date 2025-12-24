@@ -1,10 +1,50 @@
+"use client"
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ClassList } from "@/components/staff-dashboard/class-list"
 import { ClassTimetable } from "@/components/staff-dashboard/class-timetable"
 import { SubjectMapping } from "@/components/staff-dashboard/subject-mapping"
-import { LayoutGrid, List, Calendar } from "lucide-react"
+import { LayoutGrid, List, Calendar, Loader2 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { useEffect, useState } from "react"
+import { getTimetable, getStaffSubjects } from "@/app/actions/acdemics/main"
+import { TimetableEntry } from "@/types/academic"
 
 export default function StaffClassesPage() {
+  const { user } = useAuth()
+  const [timetable, setTimetable] = useState<TimetableEntry[]>([])
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadData() {
+      if (user?.id) {
+        setLoading(true)
+        try {
+          const [timetableData, subjectsData] = await Promise.all([
+            getTimetable({ staffId: user.id }),
+            getStaffSubjects(user.id)
+          ])
+          setTimetable(timetableData)
+          setSubjects(subjectsData)
+        } catch (error) {
+          console.error("Failed to load staff classes data:", error)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+    loadData()
+  }, [user?.id])
+
+  if (loading) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -26,11 +66,11 @@ export default function StaffClassesPage() {
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
-          <ClassList />
+          <ClassList timetable={timetable} />
         </TabsContent>
 
         <TabsContent value="mapping" className="space-y-4">
-          <SubjectMapping />
+          <SubjectMapping subjects={subjects} />
         </TabsContent>
 
         <TabsContent value="timetable" className="space-y-4">
@@ -45,7 +85,7 @@ export default function StaffClassesPage() {
                 </div>
             </div>
             <div className="p-0">
-                <ClassTimetable />
+                <ClassTimetable timetable={timetable} />
             </div>
           </div>
         </TabsContent>

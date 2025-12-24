@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   IconChartBar,
   IconDashboard,
@@ -9,7 +10,6 @@ import {
   IconSchool,
   IconFileDescription,
   IconHelp,
-  IconInnerShadowTop,
   IconListDetails,
   IconSearch,
   IconSettings,
@@ -229,7 +229,7 @@ export function AppSidebar({ role = "admin", ...props }: AppSidebarProps) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="#">
-                <IconInnerShadowTop className="!size-5" />
+               <Image src="/cms.png" alt="Campus HMS Logo" width={32} height={32} / >
                 <span className="text-base font-semibold">Campus HMS</span>
               </a>
             </SidebarMenuButton>

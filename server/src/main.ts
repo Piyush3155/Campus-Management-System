@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import * as fs from 'fs';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { LoggingInterceptor } from '../src/comman/interceptors/logging.interceptor';
-import "dotenv/config";
+require('dotenv').config();
 
 function getLocalIP() {
   const os = require('os');

@@ -1,23 +1,27 @@
 import { Card, CardContent } from "@/components/ui/card"
+import { TimetableEntry } from "@/types/academic"
+import { format } from "date-fns"
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-const timeSlots = ["09:00 AM", "10:30 AM", "12:00 PM", "02:00 PM", "03:30 PM"]
+const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
+const timeSlots = ["09:00", "10:30", "12:00", "14:00", "15:30"]
 
-const timetableData = [
-  { day: "Monday", time: "09:00 AM", subject: "Mathematics", room: "101", section: "A" },
-  { day: "Monday", time: "02:00 PM", subject: "Computer Science", room: "Lab 1", section: "C" },
-  { day: "Tuesday", time: "10:30 AM", subject: "Physics", room: "204", section: "B" },
-  { day: "Wednesday", time: "09:00 AM", subject: "Mathematics", room: "101", section: "A" },
-  { day: "Thursday", time: "10:30 AM", subject: "Physics", room: "204", section: "B" },
-  { day: "Thursday", time: "02:00 PM", subject: "Computer Science", room: "Lab 1", section: "C" },
-  { day: "Friday", time: "09:00 AM", subject: "Mathematics", room: "101", section: "A" },
-]
+interface ClassTimetableProps {
+  timetable: TimetableEntry[]
+}
 
-export function ClassTimetable() {
+export function ClassTimetable({ timetable }: ClassTimetableProps) {
+  if (timetable.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
+        <p>No schedule available yet.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[800px]">
-        <div className="grid grid-cols-6 border-b bg-muted/30">
+        <div className="grid grid-cols-7 border-b bg-muted/30">
           <div className="p-4 font-semibold text-center border-r">Time</div>
           {days.map((day) => (
             <div key={day} className="p-4 font-semibold text-center border-r last:border-r-0">
@@ -27,18 +31,22 @@ export function ClassTimetable() {
         </div>
         
         {timeSlots.map((slot) => (
-          <div key={slot} className="grid grid-cols-6 border-b last:border-b-0">
+          <div key={slot} className="grid grid-cols-7 border-b last:border-b-0">
             <div className="p-4 text-sm font-medium text-center bg-muted/10 border-r">{slot}</div>
             {days.map((day) => {
-              const session = timetableData.find((d) => d.day === day && d.time === slot)
+              const session = timetable.find((d) => {
+                const sessionTime = format(new Date(d.startTime), "HH:mm")
+                return d.dayOfWeek === day && sessionTime === slot
+              })
+              
               return (
                 <div key={`${day}-${slot}`} className="p-2 border-r last:border-r-0 min-h-[100px]">
                   {session ? (
                     <Card className="h-full bg-blue-50/50 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 shadow-sm">
                       <CardContent className="p-3">
-                        <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{session.subject}</p>
+                        <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{session.subject?.name}</p>
                         <p className="text-[10px] text-blue-600/70 dark:text-blue-400">Class: {session.section}</p>
-                        <p className="text-[10px] text-blue-600/70 dark:text-blue-400">Room: {session.room}</p>
+                        <p className="text-[10px] text-blue-600/70 dark:text-blue-400">Room: {session.room || "N/A"}</p>
                       </CardContent>
                     </Card>
                   ) : (

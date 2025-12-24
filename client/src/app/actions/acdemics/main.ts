@@ -69,6 +69,20 @@ export async function getSubjects(departmentId?: string): Promise<Subject[]> {
     }
 }
 
+export async function getStaffSubjects(staffId: string): Promise<any[]> {
+    try {
+        const res = await fetch(`${API_URL}/staff/${staffId}/subjects`, {
+            headers: await getHeaders(),
+            cache: "no-store"
+        })
+        if (!res.ok) return []
+        return await res.json()
+    } catch (error) {
+        console.error("Failed to fetch staff subjects", error)
+        return []
+    }
+}
+
 export async function getTimetable(options: { staffId?: string, departmentId?: string }): Promise<TimetableEntry[]> {
     try {
         let url = `${API_URL}/timetable/staff/${options.staffId}`;

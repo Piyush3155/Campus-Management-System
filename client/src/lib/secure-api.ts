@@ -168,19 +168,31 @@ class SecureApiClient {
 
     try {
       const contentType = response.headers.get('content-type');
+      let data: any;
+
       if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        return {
-          data: data as T,
-          status
-        };
+        data = await response.json();
       } else {
-        const text = await response.text();
+        data = await response.text();
+      }
+
+      if (!response.ok) {
+        // If it's a NestJS error object, extract the message
+        const errorMessage = (data && typeof data === 'object' && data.message)
+          ? (Array.isArray(data.message) ? data.message[0] : data.message)
+          : (typeof data === 'string' ? data : 'An error occurred');
+
         return {
-          data: text as unknown as T,
-          status
+          error: errorMessage,
+          status,
+          data
         };
       }
+
+      return {
+        data: data as T,
+        status
+      };
     } catch {
       return {
         error: 'Invalid response format',

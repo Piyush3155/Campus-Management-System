@@ -7,41 +7,29 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { TimetableEntry } from "@/types/academic"
+import { format } from "date-fns"
 
-const classes = [
-  {
-    id: "CLS001",
-    name: "Mathematics",
-    section: "A",
-    semester: "Semester 1",
-    year: "1st Year",
-    students: 45,
-    room: "Room 101",
-    schedule: "Mon, Wed, Fri",
-  },
-  {
-    id: "CLS002",
-    name: "Physics",
-    section: "B",
-    semester: "Semester 3",
-    year: "2nd Year",
-    students: 38,
-    room: "Lab 204",
-    schedule: "Tue, Thu",
-  },
-  {
-    id: "CLS003",
-    name: "Computer Science",
-    section: "C",
-    semester: "Semester 1",
-    year: "1st Year",
-    students: 52,
-    room: "Server Lab",
-    schedule: "Mon, Thu",
-  },
-]
+interface ClassListProps {
+  timetable: TimetableEntry[]
+}
 
-export function ClassList() {
+export function ClassList({ timetable }: ClassListProps) {
+  // Deduplicate classes by subject, section, and semester
+  const uniqueClasses = Array.from(new Set(timetable.map(t => `${t.subjectId}-${t.section}-${t.semester}`)))
+    .map(key => {
+      return timetable.find(t => `${t.subjectId}-${t.section}-${t.semester}` === key)
+    })
+    .filter(Boolean) as TimetableEntry[]
+
+  if (uniqueClasses.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 rounded-md border bg-card text-muted-foreground">
+        <p>No classes assigned yet.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-md border bg-card">
       <Table>
@@ -49,34 +37,41 @@ export function ClassList() {
           <TableRow>
             <TableHead>Class Name</TableHead>
             <TableHead>Section</TableHead>
-            <TableHead>Semester / Year</TableHead>
-            <TableHead>Students</TableHead>
+            <TableHead>Semester</TableHead>
             <TableHead>Room</TableHead>
             <TableHead>Schedule</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {classes.map((cls) => (
-            <TableRow key={cls.id} className="hover:bg-muted/50 transition-colors">
-              <TableCell className="font-medium">{cls.name}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{cls.section}</Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{cls.semester}</span>
-                  <span className="text-xs text-muted-foreground">{cls.year}</span>
-                </div>
-              </TableCell>
-              <TableCell>{cls.students}</TableCell>
-              <TableCell>{cls.room}</TableCell>
-              <TableCell>{cls.schedule}</TableCell>
-              <TableCell>
-                <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-none">Active</Badge>
-              </TableCell>
-            </TableRow>
-          ))}
+          {uniqueClasses.map((cls) => {
+            const classSchedule = timetable
+              .filter(t => t.subjectId === cls.subjectId && t.section === cls.section && t.semester === cls.semester)
+              .map(t => t.dayOfWeek.slice(0, 3))
+              .join(", ")
+
+            return (
+              <TableRow key={cls.id} className="hover:bg-muted/50 transition-colors">
+                <TableCell className="font-medium">
+                  <div>
+                    <span className="block font-semibold">{cls.subject?.name}</span>
+                    <span className="text-xs text-muted-foreground">{cls.subject?.code}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{cls.section}</Badge>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm font-medium">Semester {cls.semester}</span>
+                </TableCell>
+                <TableCell>{cls.room || "N/A"}</TableCell>
+                <TableCell>{classSchedule}</TableCell>
+                <TableCell>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-none">Active</Badge>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

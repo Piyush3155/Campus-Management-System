@@ -54,6 +54,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
@@ -123,7 +130,10 @@ export default function StaffPage() {
       email: formData.get('email') as string,
       password: formData.get('password') as string,
       phone: formData.get('phone') as string || undefined,
+      departmentId: formData.get('departmentId') as string || undefined,
     }
+
+    console.log('DEBUG: Submitting staff data:', { ...data, password: '[REDACTED]' });
 
     setCreating(true)
     const result = await createStaff(data)
@@ -187,8 +197,25 @@ export default function StaffPage() {
                   <Input id="phone" name="phone" placeholder="+1234567890" className="col-span-3" />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="password" className="text-right">Password</Label>
+                  <Label htmlFor="password" title="Password" className="text-right">Password</Label>
                   <Input id="password" name="password" type="password" placeholder="••••••••" className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="departmentId" className="text-right">Department</Label>
+                  <div className="col-span-3">
+                    <Select name="departmentId">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

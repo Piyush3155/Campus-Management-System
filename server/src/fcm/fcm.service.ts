@@ -1,22 +1,15 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { getFirebaseAdmin } from '../firebase/firebase-admin.provider';
 import * as admin from 'firebase-admin';
 
 @Injectable()
 export class FcmService {
   private readonly logger = new Logger(FcmService.name);
+  private readonly firebaseAdmin: typeof admin;
 
-  constructor(private prisma: PrismaService) {
-    // Initialize Firebase Admin SDK
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        }),
-      });
-    }
+  constructor(private readonly prisma: PrismaService) {
+    this.firebaseAdmin = getFirebaseAdmin(); // ✅ SAFE
   }
 
   /**
@@ -501,7 +494,7 @@ export class FcmService {
       };
 
       // Send the notifications
-      const response = await admin.messaging().sendEachForMulticast(message);
+      const response = await this.firebaseAdmin.messaging().sendEachForMulticast(message);
       this.logger.log(
         `Notification sent: ${response.successCount} succeeded, ${response.failureCount} failed`,
       );
