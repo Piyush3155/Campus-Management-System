@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Department, User, Course, Subject } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -195,7 +195,7 @@ async function main() {
     { name: 'Arts', code: 'ART' },
   ];
 
-  const departments = [];
+  const departments: Department[] = [];
   for (const dept of departmentsData) {
     const department = await prisma.department.upsert({
       where: { name: dept.name },
@@ -275,7 +275,7 @@ async function main() {
     },
   ];
 
-  const departmentStaff = [];
+  const departmentStaff: (User & { subjects: string[] })[] = [];
   for (const staffData of departmentStaffData) {
     const department = departments.find(d => d.name === staffData.departmentName);
     if (!department) continue;
@@ -380,7 +380,7 @@ async function main() {
     { title: 'Bachelor of Arts in History', code: 'BA_History', departmentName: 'Arts', type: 'UNDERGRADUATE', duration: '3 Years', totalSemesters: 6, credits: 180 },
   ];
 
-  const courses = [];
+  const courses: Course[] = [];
   for (const courseData of coursesData) {
     const department = departments.find(d => d.name === courseData.departmentName);
     if (!department) continue;
@@ -446,7 +446,7 @@ async function main() {
     { name: 'British Literature', code: 'ENG202', departmentName: 'Arts', semester: 4, credits: 4 },
   ];
 
-  const subjects = [];
+  const subjects: Subject[] = [];
   for (const subjectData of subjectsData) {
     const department = departments.find(d => d.name === subjectData.departmentName);
     if (!department) continue;
@@ -486,7 +486,7 @@ async function main() {
     if (!staffWithDept?.department) continue;
 
     // Get subjects from the staff's department
-    const deptSubjects = subjects.filter(s => s.departmentId === staffWithDept.department.id);
+    const deptSubjects = subjects.filter(s => s.departmentId === staffWithDept.department!.id);
 
     // Assign some subjects to this staff (limit to 3-4 per staff)
     const subjectsToAssign = deptSubjects.slice(0, 4);
