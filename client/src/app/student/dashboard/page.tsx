@@ -1,10 +1,13 @@
 import React from "react"
+import Link from "next/link"
 import { 
   CheckCircle2, 
   BookOpen, 
   Award, 
   FileText, 
   ChevronRight,
+  Sparkles,
+  Compass
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getStudentDashboardData, StudentDashboardData } from "@/lib/dashboard-api"
@@ -47,6 +50,25 @@ export default async function StudentDashboard() {
             <AvatarImage src="" />
             <AvatarFallback>{data.name.substring(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
+      </section>
+
+      {/* Career Roadmap Quick Action */}
+      <section>
+        <Link href="/student/roadmap" className="block p-6 rounded-[2.5rem] bg-primary hover:bg-primary/95 transition-all cursor-pointer shadow-xl shadow-primary/10 dark:shadow-none group">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-primary-foreground/90">
+                <Sparkles className="h-5 w-5" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">AI Powered</span>
+              </div>
+              <h3 className="text-xl font-bold text-primary-foreground">Career Roadmap</h3>
+              <p className="text-primary-foreground/80 text-sm">Generate your personalized career path</p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Compass className="h-6 w-6 text-primary-foreground" />
+            </div>
+          </div>
+        </Link>
       </section>
 
       {/* Main Stats Grid */}
