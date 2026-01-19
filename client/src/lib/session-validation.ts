@@ -190,13 +190,13 @@ export async function refreshTokenIfNeeded(): Promise<boolean> {
     // Refresh if token is expired or expires within 5 minutes
     if (timeUntilExpiry < fiveMinutes) {
       console.log(`Refreshing token... (Time until expiry: ${timeUntilExpiry}s)`);
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+      const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        const response = await fetch(`${BACKEND_URL}/auth/refresh`, {
+        const response = await fetch(`${NEXT_PUBLIC_API_URL}/auth/refresh`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

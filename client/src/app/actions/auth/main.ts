@@ -120,11 +120,11 @@ export async function logout(): Promise<void> {
     // Optional: Call backend logout endpoint to invalidate server-side token
     if (accessToken) {
       try {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+        const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_NEXT_PUBLIC_API_URL || 'http://localhost:3000';
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        await fetch(`${BACKEND_URL}/auth/logout`, {
+        await fetch(`${NEXT_PUBLIC_API_URL}/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
