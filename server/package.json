@@ -21,13 +21,17 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@nestjs/common": "^11.1.10",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.10",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.10",
     "@nestjs/swagger": "^11.2.3",
+    "@types/nodemailer": "^7.0.5",
+    "@types/passport-local": "^1.0.38",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
@@ -37,8 +41,10 @@
     "helmet": "^8.1.0",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
+    "nodemailer": "^7.0.12",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "passport-local": "^1.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
