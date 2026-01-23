@@ -1,10 +1,8 @@
 "use client"
 
 import {
-  IconCreditCard,
   IconDotsVertical,
   IconLogout,
-  IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react"
 
@@ -29,18 +27,28 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/context/AuthContext"
+import { useRouter } from "next/navigation"
 
 export function NavUser({
   user,
+  role = "admin",
 }: {
   user: {
     name: string
     email: string
     avatar: string
   }
+  role?: "admin" | "staff" | "student"
 }) {
   const { isMobile } = useSidebar()
   const { logout } = useAuth()
+  const router = useRouter()
+
+  const profileUrl = role === "admin" 
+    ? "/admin-dashboard/profile" 
+    : role === "staff" 
+    ? "/staff/profile" 
+    : "/student/profile";
 
   return (
     <SidebarMenu>
@@ -86,24 +94,16 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => window.location.href = '/admin-dashboard/profile'}>
+              <DropdownMenuItem onClick={() => router.push(profileUrl)}>
                 <IconUserCircle />
                 Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconCreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconNotification />
-                Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={async () => {
                 try {
                     await logout();
-                    window.location.href = '/login';
+                    router.push('/login');
                 } catch (error) {
                     console.error("Logout failed", error);
                 }

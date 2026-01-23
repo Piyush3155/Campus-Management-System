@@ -9,20 +9,14 @@ import {
   IconBook,
   IconSchool,
   IconFileDescription,
-  IconHelp,
   IconListDetails,
-  IconSearch,
-  IconSettings,
   IconUsers,
   IconCertificate,
   IconSpeakerphone,
-  IconBell,
-  IconLock,
   IconUserCircle,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -174,35 +168,7 @@ const studentNav = [
   },
 ];
 
-const data = {
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: IconSettings,
-    },
-    {
-      title: "Notifications",
-      url: "/notifications",
-      icon: IconBell,
-    },
-    {
-      title: "Security Audit",
-      url: "/security",
-      icon: IconLock,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-}
+
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   role?: "admin" | "staff" | "student";
@@ -238,10 +204,9 @@ export function AppSidebar({ role = "admin", ...props }: AppSidebarProps) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navItems} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={sidebarUser} />
+        <NavUser user={sidebarUser} role={role} />
       </SidebarFooter>
     </Sidebar>
   )
