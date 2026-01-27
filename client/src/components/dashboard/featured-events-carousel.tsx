@@ -205,6 +205,21 @@ export function FeaturedEventsCarousel({ events }: FeaturedEventsCarouselProps) 
             {/* Details Dialog */}
             <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
                 <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden">
+                    <DialogTitle 
+                        style={{
+                            position: 'absolute',
+                            width: '1px',
+                            height: '1px',
+                            padding: 0,
+                            margin: '-1px',
+                            overflow: 'hidden',
+                            clip: 'rect(0, 0, 0, 0)',
+                            whiteSpace: 'nowrap',
+                            border: 0
+                        }}
+                    >
+                        {currentEvent.title}
+                    </DialogTitle>
                     {/* Header Image */}
                     {currentEvent.attachmentUrl && (
                         <div className="relative h-48 w-full">
@@ -262,7 +277,7 @@ export function FeaturedEventsCarousel({ events }: FeaturedEventsCarouselProps) 
                             )}
                             
                             {/* View Attachment Link */}
-                            {currentEvent.attachmentUrl && (
+                            {/* {currentEvent.attachmentUrl && (
                                 <div className="pt-2">
                                     <a 
                                         href={currentEvent.attachmentUrl}
@@ -274,7 +289,7 @@ export function FeaturedEventsCarousel({ events }: FeaturedEventsCarouselProps) 
                                         <ChevronRight className="h-4 w-4" />
                                     </a>
                                 </div>
-                            )}
+                            )} */}
                         </div>
                     </div>
                 </DialogContent>
