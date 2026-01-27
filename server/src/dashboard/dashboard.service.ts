@@ -123,21 +123,56 @@ export class DashboardService {
     });
 
     return events.map((e) => ({
+      id: e.id,
       title: e.title,
+      description: e.description,
       date: e.date.toLocaleDateString('en-US', {
         month: 'short',
         day: '2-digit',
         year: 'numeric',
       }),
       type: e.type,
+      attachmentUrl: e.attachmentUrl,
+    }));
+  }
+
+  async getFeaturedEvents() {
+    // Get up to 5 most recently created upcoming events
+    const events = await this.prisma.academicEvent.findMany({
+      where: {
+        date: {
+          gte: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 5,
+    });
+
+    if (events.length === 0) return [];
+
+    return events.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      date: e.date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      type: e.type,
+      attachmentUrl: e.attachmentUrl,
     }));
   }
 
   async getDashboardData() {
-    const [stats, deptStats, upcomingEvents] = await Promise.all([
+    const [stats, deptStats, upcomingEvents, featuredEvents] = await Promise.all([
       this.getAdminStats(),
       this.getDepartmentStats(),
       this.getUpcomingEvents(),
+      this.getFeaturedEvents(),
     ]);
 
     return {
@@ -145,6 +180,7 @@ export class DashboardService {
       studentData: deptStats.studentData,
       staffData: deptStats.staffData,
       upcomingEvents,
+      featuredEvents,
     };
   }
 
@@ -237,9 +273,12 @@ export class DashboardService {
         status: t.startTime > new Date() ? 'Upcoming' : 'Completed', // Simplified
       }));
 
+    const featuredEvents = await this.getFeaturedEvents();
+
     return {
       stats,
       schedule,
+      featuredEvents,
     };
   }
 
@@ -280,6 +319,8 @@ export class DashboardService {
     const presentCount = attendanceRecords.filter((r) => r.status === 'PRESENT').length;
     const attendancePercentage = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
 
+    const featuredEvents = await this.getFeaturedEvents();
+
     return {
       name: user?.name || 'Student',
       stats: [
@@ -292,6 +333,7 @@ export class DashboardService {
         title: e.title,
         date: e.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       })),
+      featuredEvents,
     };
   }
 }

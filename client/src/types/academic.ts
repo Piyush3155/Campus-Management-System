@@ -111,6 +111,7 @@ export interface AcademicEvent {
     description?: string;
     date: string;
     type: "EVENT" | "HOLIDAY" | "EXAM";
+    attachmentUrl?: string;
 }
 
 export interface CreateAcademicYearPayload {
@@ -125,6 +126,7 @@ export interface CreateEventPayload {
     description?: string;
     date: Date | string;
     type: "EVENT" | "HOLIDAY" | "EXAM";
+    attachmentUrl?: string;
 }
 
 export interface CreateSubjectPayload {

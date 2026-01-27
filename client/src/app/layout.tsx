@@ -4,7 +4,6 @@ import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { FcmHandler } from "@/components/auth/FcmHandler";
-import { FloatingChatbot } from "@/components/ai/floating-chatbot";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -32,7 +31,7 @@ export default function RootLayout({
           <FcmHandler />
           {children}
           <Toaster />
-          <FloatingChatbot />
+         
         </AuthProvider>
       </body>
     </html>

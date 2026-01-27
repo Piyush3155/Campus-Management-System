@@ -10,6 +10,7 @@ import {
   Compass
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { FeaturedEventsCarousel } from "@/components/dashboard/featured-events-carousel"
 import { getStudentDashboardData, StudentDashboardData } from "@/lib/dashboard-api"
 
 export const dynamic = 'force-dynamic'
@@ -51,6 +52,13 @@ export default async function StudentDashboard() {
             <AvatarFallback>{data.name.substring(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       </section>
+
+      {/* Featured Events Carousel */}
+      {data.featuredEvents && data.featuredEvents.length > 0 && (
+        <section>
+          <FeaturedEventsCarousel events={data.featuredEvents} />
+        </section>
+      )}
 
       {/* Career Roadmap Quick Action */}
       <section>
@@ -106,22 +114,6 @@ export default async function StudentDashboard() {
             {data.upcomingExams.length === 0 && (
                 <p className="text-center text-muted-foreground py-4">No upcoming exams</p>
             )}
-        </div>
-      </section>
-
-      {/* Campus Event Card */}
-      <section className="pb-4 mb-11">
-        <div className="relative aspect-[16/9] rounded-[2.5rem] overflow-hidden group shadow-lg">
-            <img 
-                src="https://images.unsplash.com/photo-1541339907198-e08756ebafe1?q=80&w=2070&auto=format&fit=crop" 
-                alt="Campus" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6">
-                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest mb-1 block">Student Council</span>
-                <h4 className="text-xl font-bold text-white">Annual TechFest 2024</h4>
-            </div>
         </div>
       </section>
     </div>

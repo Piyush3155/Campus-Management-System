@@ -8,22 +8,43 @@ export interface DashboardStats {
   color?: string;
 }
 
+export interface FeaturedEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string;
+  type: string;
+  attachmentUrl?: string;
+}
+
+export interface UpcomingEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string;
+  type: string;
+  attachmentUrl?: string;
+}
+
 export interface AdminDashboardData {
   stats: DashboardStats[];
   studentData: { name: string; total: number }[];
   staffData: { name: string; total: number }[];
-  upcomingEvents: { title: string; date: string; type: string }[];
+  upcomingEvents: UpcomingEvent[];
+  featuredEvents: FeaturedEvent[];
 }
 
 export interface StaffDashboardData {
   stats: DashboardStats[];
   schedule: { subject: string; class: string; time: string; status: string }[];
+  featuredEvents: FeaturedEvent[];
 }
 
 export interface StudentDashboardData {
   name: string;
   stats: { label: string; value: string }[];
   upcomingExams: { title: string; date: string }[];
+  featuredEvents: FeaturedEvent[];
 }
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {

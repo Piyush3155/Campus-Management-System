@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsDateString, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsEnum, IsOptional, IsUrl } from 'class-validator';
 import { AcademicEventType } from '@prisma/client';
 
 export class CreateEventDto {
@@ -17,4 +17,8 @@ export class CreateEventDto {
     @IsEnum(AcademicEventType)
     @IsNotEmpty()
     type: AcademicEventType;
+
+    @IsUrl()
+    @IsOptional()
+    attachmentUrl?: string;
 }

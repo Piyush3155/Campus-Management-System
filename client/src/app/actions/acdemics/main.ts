@@ -272,6 +272,41 @@ export async function createEvent(data: CreateEventPayload): Promise<ApiResponse
     }
 }
 
+const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL || "http://localhost:3001"
+
+export interface UploadResponse {
+    success: boolean
+    message?: string
+    url?: string
+    filename?: string
+}
+
+export async function uploadEventAttachment(file: File): Promise<UploadResponse> {
+    try {
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const res = await fetch(`${CDN_URL}/events/upload`, {
+            method: "POST",
+            body: formData,
+        })
+
+        if (!res.ok) {
+            const error = await res.json()
+            return { success: false, message: error.message || "Failed to upload attachment" }
+        }
+
+        const data = await res.json()
+        return { 
+            success: true, 
+            url: data.url,
+            filename: data.filename,
+        }
+    } catch {
+        return { success: false, message: "Network error occurred during upload" }
+    }
+}
+
 export async function createSubject(data: CreateSubjectPayload): Promise<ApiResponse> {
     try {
         const res = await fetch(`${API_URL}/subjects`, {

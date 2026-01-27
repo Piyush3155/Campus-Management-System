@@ -516,6 +516,7 @@ model AcademicEvent {
   description String?
   date        DateTime
   type        AcademicEventType
+  attachmentUrl String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

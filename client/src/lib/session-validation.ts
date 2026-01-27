@@ -190,7 +190,7 @@ export async function refreshTokenIfNeeded(): Promise<boolean> {
     // Refresh if token is expired or expires within 5 minutes
     if (timeUntilExpiry < fiveMinutes) {
       console.log(`Refreshing token... (Time until expiry: ${timeUntilExpiry}s)`);
-      const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
       try {
         const controller = new AbortController();

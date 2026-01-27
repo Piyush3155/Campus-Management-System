@@ -13,6 +13,7 @@ export class EventsService {
                 description: createEventDto.description,
                 date: new Date(createEventDto.date),
                 type: createEventDto.type,
+                attachmentUrl: createEventDto.attachmentUrl,
             },
         });
     }
@@ -20,11 +21,29 @@ export class EventsService {
     async findAll() {
         return this.prisma.academicEvent.findMany({
             orderBy: { date: 'asc' },
+        });
+    }
+
+    async findUpcoming() {
+        return this.prisma.academicEvent.findMany({
+            orderBy: { date: 'asc' },
             where: {
                 date: {
-                    gte: new Date(), // Future events
+                    gte: new Date(),
                 }
             }
+        });
+    }
+
+    async findOne(id: string) {
+        return this.prisma.academicEvent.findUnique({
+            where: { id },
+        });
+    }
+
+    async delete(id: string) {
+        return this.prisma.academicEvent.delete({
+            where: { id },
         });
     }
 }

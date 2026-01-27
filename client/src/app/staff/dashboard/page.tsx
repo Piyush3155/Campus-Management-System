@@ -1,6 +1,7 @@
 import { StaffStatsCards } from "@/components/staff-dashboard/stats-cards"
 import { StaffQuickActions } from "@/components/staff-dashboard/quick-actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FeaturedEventsCarousel } from "@/components/dashboard/featured-events-carousel"
 import { getStaffDashboardData } from "@/lib/dashboard-api"
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,11 @@ export default async function StaffDashboardPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Staff Dashboard</h1>
       </div>
+      
+      {/* Featured Events Carousel */}
+      {data.featuredEvents && data.featuredEvents.length > 0 && (
+        <FeaturedEventsCarousel events={data.featuredEvents} />
+      )}
       
       <StaffStatsCards stats={data.stats} />
 
