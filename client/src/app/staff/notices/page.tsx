@@ -34,15 +34,15 @@ export default function NoticesPage() {
 
   const stats = [
     { label: "Total Announcements", value: notices.length.toString(), icon: Bell, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Pinned Notices", value: notices.filter(n => n.pinned).length.toString(), icon: Building2, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: "Pinned Notices", value: (notices || []).filter(n => n.pinned).length.toString(), icon: Building2, color: "text-purple-600", bg: "bg-purple-50" },
     {
-      label: "Recent (7d)", value: notices.filter(n => {
+      label: "Recent (7d)", value: (notices || []).filter(n => {
         const weekAgo = new Date()
         weekAgo.setDate(weekAgo.getDate() - 7)
         return new Date(n.createdAt) > weekAgo
       }).length.toString(), icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50"
     },
-    { label: "Audience: All", value: notices.filter(n => n.audience === 'ALL').length.toString(), icon: Megaphone, color: "text-orange-600", bg: "bg-orange-50" },
+    { label: "Audience: All", value: (notices || []).filter(n => n.audience === 'ALL').length.toString(), icon: Megaphone, color: "text-orange-600", bg: "bg-orange-50" },
   ]
 
   return (

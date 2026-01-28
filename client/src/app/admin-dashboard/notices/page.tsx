@@ -105,20 +105,22 @@ export default function NoticesPage() {
         });
         
         if (result.success && result.data) {
+            const newNotices = result.data.notices || [];
             if (append) {
-                setNotices(prev => [...prev, ...result.data!.notices]);
+                setNotices(prev => [...(prev || []), ...newNotices]);
             } else {
-                setNotices(result.data.notices);
+                setNotices(newNotices);
             }
             setPagination({
-                total: result.data.total,
-                page: result.data.page,
-                limit: result.data.limit,
-                totalPages: result.data.totalPages
+                total: result.data.total || 0,
+                page: result.data.page || 1,
+                limit: result.data.limit || 10,
+                totalPages: result.data.totalPages || 0
             });
         } else {
             setError(result.error || "Failed to load notices");
             toast.error(result.error || "Failed to load notices");
+            if (!append) setNotices([]);
         }
         
         setIsLoading(false);
@@ -213,8 +215,8 @@ export default function NoticesPage() {
     };
 
     // Pinned notices are usually filtered by search as well
-    const pinnedNotices = notices.filter(n => n.pinned);
-    const otherNotices = notices.filter(n => !n.pinned);
+    const pinnedNotices = (notices || []).filter(n => n.pinned);
+    const otherNotices = (notices || []).filter(n => !n.pinned);
 
     return (
         <div className="flex flex-col gap-6 p-6">
