@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Req } from '@nestjs/common';
 import { ExamsService } from './exams.service';
-import { CreateExamDto, UpdateExamDto } from './dto/exam.dto';
+import { CreateExamDto, UpdateExamDto, SubmitMarksDto } from './dto/exam.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -41,6 +41,38 @@ export class ExamsController {
         return this.examsService.getResultOverview();
     }
 
+    @Get('staff-exams')
+    @Roles('STAFF')
+    @ApiOperation({ summary: 'Get exams relevant to staff' })
+    getStaffExams(@Req() req: any) {
+        return this.examsService.getStaffExams(req.user.id);
+    }
+
+    @Get('staff-subjects')
+    @Roles('STAFF')
+    @ApiOperation({ summary: 'Get subjects assigned to staff by department' })
+    getStaffSubjects(@Req() req: any) {
+        return this.examsService.getStaffSubjects(req.user.id);
+    }
+
+    @Post('submit-marks')
+    @Roles('STAFF', 'ADMIN')
+    @ApiOperation({ summary: 'Submit marks for students' })
+    submitMarks(@Body() submitMarksDto: SubmitMarksDto) {
+        return this.examsService.submitMarks(submitMarksDto);
+    }
+
+    @Get(':examId/students')
+    @Roles('STAFF', 'ADMIN')
+    @ApiOperation({ summary: 'Get students for marks entry' })
+    getStudentsForMarksEntry(
+        @Param('examId') examId: string,
+        @Query('subjectId') subjectId: string,
+        @Query('semester') semester: string
+    ) {
+        return this.examsService.getStudentsForMarksEntry(examId, subjectId, parseInt(semester));
+    }
+
     @Get(':id')
     @Roles('ADMIN', 'STAFF', 'STUDENT')
     @ApiOperation({ summary: 'Get a specific exam' })
@@ -62,3 +94,4 @@ export class ExamsController {
         return this.examsService.remove(id);
     }
 }
+

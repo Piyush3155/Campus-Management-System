@@ -137,6 +137,9 @@ export function MarkAttendance() {
                     <SelectItem key={session.id} value={session.id} disabled={session.status === 'CANCELLED'}>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{session.timetable?.subject.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({session.semester} Sem {session.section || 'All'})
+                        </span>
                         <span className="text-muted-foreground">({formatTime(session.startTime)} - {formatTime(session.endTime)})</span>
                         <Badge variant="outline" className={`ml-2 text-[10px] ${session.status === 'COMPLETED' ? 'bg-green-50 text-green-600' :
                           session.status === 'CANCELLED' ? 'bg-red-50 text-red-600 border-red-100' :

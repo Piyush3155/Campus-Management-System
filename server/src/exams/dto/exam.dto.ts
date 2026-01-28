@@ -1,6 +1,7 @@
-import { IsString, IsEnum, IsDateString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsEnum, IsDateString, IsOptional, IsBoolean, IsNumber, IsArray, ValidateNested, Min, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { ExamType, ExamStatus } from '@prisma/client';
+import { ExamType, ExamStatus, AssessmentType } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class CreateExamDto {
     @ApiProperty()
@@ -93,3 +94,46 @@ export class UpdateExamDto {
     @IsBoolean()
     isResultPublished?: boolean;
 }
+
+export class StudentMarkDto {
+    @ApiProperty()
+    @IsString()
+    studentId: string;
+
+    @ApiProperty()
+    @IsNumber()
+    @Min(0)
+    marks: number;
+}
+
+export class SubmitMarksDto {
+    @ApiProperty()
+    @IsString()
+    examId: string;
+
+    @ApiProperty()
+    @IsString()
+    subjectId: string;
+
+    @ApiProperty()
+    @IsNumber()
+    @Min(1)
+    @Max(8)
+    semester: number;
+
+    @ApiProperty({ enum: AssessmentType })
+    @IsEnum(AssessmentType)
+    assessmentType: AssessmentType;
+
+    @ApiProperty()
+    @IsNumber()
+    @Min(0)
+    maxMarks: number;
+
+    @ApiProperty({ type: [StudentMarkDto] })
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => StudentMarkDto)
+    marks: StudentMarkDto[];
+}
+

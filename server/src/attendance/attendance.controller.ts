@@ -14,7 +14,7 @@ export class AttendanceController {
     @Get('sessions/today')
     @Roles(CMSUserRole.STAFF)
     async getTodaySessions(@Request() req) {
-        return this.attendanceService.getTodaySessionsForStaff(req.user.userId);
+        return this.attendanceService.getTodaySessionsForStaff(req.user.id);
     }
 
     @Get('sessions/:id/students')
@@ -58,7 +58,7 @@ export class AttendanceController {
     @Get('report/staff/me')
     @Roles(CMSUserRole.STAFF)
     async getMyReport(@Request() req) {
-        return this.attendanceService.getStaffAttendanceReport(req.user.userId);
+        return this.attendanceService.getStaffAttendanceReport(req.user.id);
     }
 
     @Get('report/staff/:id')

@@ -185,3 +185,18 @@
     scrollbar-width: none; /* Firefox */
   }
 }
+
+/* Remove focus outline */
+*:focus {
+  outline: none;
+}
+
+/* Remove text caret (vertical line) */
+* {
+  caret-color: transparent;
+}
+
+/* Prevent text selection (optional but common for UI text) */
+* {
+  user-select: none;
+}
