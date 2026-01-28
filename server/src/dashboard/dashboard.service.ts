@@ -76,24 +76,27 @@ export class DashboardService {
     const departments = await this.prisma.department.findMany({
       where: { status: 'ACTIVE' },
       select: {
+        id: true,
         name: true,
-        _count: {
-          select: {
-            users: true,
-          },
-        },
       },
     });
 
-    // This is a bit simplified as 'users' includes both staff and students
-    // Let's get more specific counts
+    // Get accurate counts by department for students and staff
     const deptStats = await Promise.all(
       departments.map(async (dept) => {
         const studentCount = await this.prisma.user.count({
-          where: { departmentId: (dept as any).id, role: CMSUserRole.STUDENT },
+          where: { 
+            departmentId: dept.id, 
+            role: CMSUserRole.STUDENT,
+            isActive: true,
+          },
         });
         const staffCount = await this.prisma.user.count({
-          where: { departmentId: (dept as any).id, role: CMSUserRole.STAFF },
+          where: { 
+            departmentId: dept.id, 
+            role: CMSUserRole.STAFF,
+            isActive: true,
+          },
         });
         return {
           name: dept.name,
