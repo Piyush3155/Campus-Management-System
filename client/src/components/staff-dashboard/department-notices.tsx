@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Layers, AlertCircle, ArrowRight, Calendar, User, Pin, Search, Loader2 } from "lucide-react"
+import { Building2, Layers, AlertCircle, ArrowRight, Calendar, User, Pin, Search, Loader2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -13,33 +13,76 @@ import { toast } from "sonner"
 export function DepartmentNotices() {
     const [notices, setNotices] = React.useState<Notice[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isLoadingMore, setIsLoadingMore] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
     const [searchQuery, setSearchQuery] = React.useState("");
+    const [pagination, setPagination] = React.useState({
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0
+    });
 
-    const loadNotices = React.useCallback(async () => {
-        setIsLoading(true);
+    const observer = React.useRef<IntersectionObserver | null>(null);
+    const lastNoticeElementRef = React.useCallback((node: HTMLDivElement | null) => {
+        if (isLoading || isLoadingMore) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && pagination.page < pagination.totalPages) {
+                loadMore();
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [isLoading, isLoadingMore, pagination.page, pagination.totalPages]);
+
+    const loadNotices = React.useCallback(async (page: number = 1, append: boolean = false) => {
+        if (append) setIsLoadingMore(true);
+        else setIsLoading(true);
+        
         setError(null);
-        const result = await fetchNotices("STAFF");
+        const result = await fetchNotices({
+            audience: "STAFF",
+            page,
+            limit: 10,
+            search: searchQuery
+        });
+        
         if (result.success && result.data) {
-            setNotices(result.data);
+            if (append) {
+                setNotices(prev => [...prev, ...result.data!.notices]);
+            } else {
+                setNotices(result.data.notices);
+            }
+            setPagination({
+                total: result.data.total,
+                page: result.data.page,
+                limit: result.data.limit,
+                totalPages: result.data.totalPages
+            });
         } else {
             setError(result.error || "Failed to load notices");
             toast.error(result.error || "Failed to load notices");
         }
+        
         setIsLoading(false);
-    }, []);
+        setIsLoadingMore(false);
+    }, [searchQuery]);
+
+    const loadMore = React.useCallback(() => {
+        if (pagination.page < pagination.totalPages && !isLoadingMore) {
+            loadNotices(pagination.page + 1, true);
+        }
+    }, [pagination.page, pagination.totalPages, isLoadingMore, loadNotices]);
 
     React.useEffect(() => {
-        loadNotices();
-    }, [loadNotices]);
+        const timer = setTimeout(() => {
+            loadNotices(1, false);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
-    const filteredNotices = notices.filter(n => {
-        const matchesSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) || n.content.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesSearch;
-    });
-
-    const pinnedNotices = filteredNotices.filter(n => n.pinned);
-    const otherNotices = filteredNotices.filter(n => !n.pinned);
+    const pinnedNotices = notices.filter(n => n.pinned);
+    const otherNotices = notices.filter(n => !n.pinned);
 
     if (isLoading) {
         return (
@@ -96,15 +139,62 @@ export function DepartmentNotices() {
                 <h3 className="font-semibold text-sm text-muted-foreground">Department Notices</h3>
                 <div className="grid gap-4 md:grid-cols-1">
                     {otherNotices.length > 0 ? (
-                        otherNotices.map(notice => (
-                            <DeptNoticeCard key={notice.id} notice={notice} />
-                        ))
+                        otherNotices.map((notice, index) => {
+                            const isLastElement = index === otherNotices.length - 1;
+                            return (
+                                <div 
+                                    key={notice.id} 
+                                    ref={isLastElement ? lastNoticeElementRef : null}
+                                    className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                                    style={{ animationDelay: `${(index % 10) * 50}ms` }}
+                                >
+                                    <DeptNoticeCard notice={notice} />
+                                </div>
+                            );
+                        })
                     ) : (
-                        <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
-                            {pinnedNotices.length === 0 && searchQuery === "" ? "No department notices have been posted yet." : "No notices found matching your criteria."}
-                        </div>
+                        pinnedNotices.length === 0 && (
+                            <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                                {searchQuery === "" ? "No department notices have been posted yet." : "No notices found matching your criteria."}
+                            </div>
+                        )
                     )}
                 </div>
+            </div>
+
+            {/* Infinite Scroll / Load More Trigger */}
+            <div className="flex flex-col items-center justify-center py-8 border-t mt-4 gap-4">
+                {pagination.page < pagination.totalPages && (
+                    <Button 
+                        variant="outline" 
+                        onClick={loadMore} 
+                        disabled={isLoadingMore}
+                        className="min-w-[150px] relative overflow-hidden group transition-all duration-300 hover:pr-8"
+                    >
+                        {isLoadingMore ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Loading...
+                            </>
+                        ) : (
+                            <>
+                                Load More Notices
+                                <Plus className="absolute right-3 h-4 w-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0" />
+                            </>
+                        )}
+                    </Button>
+                )}
+                
+                {!isLoadingMore && pagination.page >= pagination.totalPages && pagination.total > 0 && (
+                    <p className="text-sm text-muted-foreground italic">You&apos;ve reached the end of the notices.</p>
+                )}
+                
+                {isLoadingMore && (
+                    <div className="flex items-center gap-2 text-primary animate-pulse">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm font-medium">Fetching more updates...</span>
+                    </div>
+                )}
             </div>
         </div>
     );

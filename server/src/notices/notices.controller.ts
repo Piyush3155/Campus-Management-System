@@ -26,8 +26,13 @@ export class NoticesController {
     }
 
     @Get()
-    findAll(@Query('audience') audience?: NoticeAudience) {
-        return this.noticesService.findAll(audience);
+    findAll(
+        @Query('audience') audience?: NoticeAudience,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10,
+        @Query('search') search?: string
+    ) {
+        return this.noticesService.findAll(audience, page, limit, search);
     }
 
     @Get(':id')
