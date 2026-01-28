@@ -38,6 +38,7 @@ export interface StaffDashboardData {
   stats: DashboardStats[];
   schedule: { subject: string; class: string; time: string; status: string }[];
   featuredEvents: FeaturedEvent[];
+  activityData: { name: string; total: number }[];
 }
 
 export interface StudentDashboardData {

@@ -1,8 +1,9 @@
 import { StaffStatsCards } from "@/components/staff-dashboard/stats-cards"
 import { StaffQuickActions } from "@/components/staff-dashboard/quick-actions"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { FeaturedEventsCarousel } from "@/components/dashboard/featured-events-carousel"
 import { getStaffDashboardData } from "@/lib/dashboard-api"
+import { StaffActivityChart } from "@/components/staff-dashboard/activity-chart"
 
 export const dynamic = 'force-dynamic'
 
@@ -26,14 +27,19 @@ export default async function StaffDashboardPage() {
         <Card className="col-span-4 bg-card/50 backdrop-blur-sm border-muted/50">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Performance Overview</CardTitle>
+            <CardDescription>Average attendance percentage per subject</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <div className="h-[350px] flex items-center justify-center text-muted-foreground border-2 border-dashed border-muted/30 rounded-xl bg-muted/5">
-                <div className="text-center">
-                    <p className="font-medium text-lg">Activity & Attendance Analytics</p>
-                    <p className="text-sm">Detailed charts and graphs will appear here</p>
+            {data.activityData && data.activityData.length > 0 ? (
+                <StaffActivityChart data={data.activityData} />
+            ) : (
+                <div className="h-[350px] flex items-center justify-center text-muted-foreground border-2 border-dashed border-muted/30 rounded-xl bg-muted/5">
+                    <div className="text-center">
+                        <p className="font-medium text-lg">No Activity Data</p>
+                        <p className="text-sm">Attendance stats will appear here once classes start</p>
+                    </div>
                 </div>
-            </div>
+            )}
           </CardContent>
         </Card>
         

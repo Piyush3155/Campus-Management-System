@@ -14,11 +14,12 @@ export class UsersController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
     @Query('role') role?: string,
-    @Query('departmentId') departmentId?: string
+    @Query('departmentId') departmentId?: string,
+    @Query('search') search?: string
   ) {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
-    return this.usersService.findAll(pageNum, limitNum, role, departmentId);
+    return this.usersService.findAll(pageNum, limitNum, role, departmentId, search);
   }
 
 

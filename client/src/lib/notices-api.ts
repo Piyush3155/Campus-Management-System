@@ -13,7 +13,7 @@ export interface Notice {
     id: string;
     title: string;
     content: string;
-    audience: "ALL" | "STAFF" | "STUDENTS";
+    audience: "ALL" | "STAFF" | "STUDENTS" | "ACADEMIC";
     pinned: boolean;
     authorId: string;
     author: {

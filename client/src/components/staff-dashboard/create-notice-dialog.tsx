@@ -90,6 +90,7 @@ export function CreateNoticeDialog({ open, onOpenChange }: CreateNoticeDialogPro
                                 <SelectItem value="ALL">All Users</SelectItem>
                                 <SelectItem value="STAFF">Staff Only</SelectItem>
                                 <SelectItem value="STUDENTS">Students Only</SelectItem>
+                                <SelectItem value="ACADEMIC">Academic</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

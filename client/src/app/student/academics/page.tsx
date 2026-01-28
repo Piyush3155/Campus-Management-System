@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { 
   Book, 
   FileText, 
@@ -14,50 +14,63 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-const subjects = [
-  "Quantum Mechanics",
-  "Advanced Data Structures",
-  "Numerical Analysis",
-  "Digital Electronics",
-  "Eng. Mathematics"
-]
+import { getNotes, getPYQs, type NoteItem, type PYQItem } from "@/lib/storage"
 
 const semesters = ["1", "2", "3", "4", "5", "6", "7", "8"]
-
-const notesData = [
-  { id: 1, title: "Quantum Tunneling Basics", subject: "Quantum Mechanics", sem: "5", type: "PDF", size: "2.4 MB", date: "Oct 20, 2024" },
-  { id: 2, title: "B-Tree Optimization", subject: "Advanced Data Structures", sem: "5", type: "PDF", size: "1.2 MB", date: "Nov 02, 2024" },
-  { id: 3, title: "Newton-Raphson Method", subject: "Numerical Analysis", sem: "5", type: "PDF", size: "0.8 MB", date: "Sep 28, 2024" },
-  { id: 4, title: "Vector Calculus Notes", subject: "Eng. Mathematics", sem: "3", type: "PDF", size: "3.5 MB", date: "Aug 15, 2024" },
-]
-
-const pyqData = [
-  { id: 1, title: "End-Sem Exam 2023", subject: "Quantum Mechanics", sem: "5", type: "PDF", size: "1.1 MB", year: "2023" },
-  { id: 2, title: "Mid-Sem Exam 2022", subject: "Advanced Data Structures", sem: "5", type: "PDF", size: "0.9 MB", year: "2022" },
-  { id: 3, title: "Annual Exam 2021", subject: "Numerical Analysis", sem: "5", type: "PDF", size: "1.5 MB", year: "2021" },
-  { id: 4, title: "Entrance Mock Paper", subject: "Digital Electronics", sem: "3", type: "PDF", size: "1.2 MB", year: "2023" },
-]
 
 export default function StudentAcademicsPage() {
   const [activeTab, setActiveTab] = useState("notes")
   const [subjectFilter, setSubjectFilter] = useState("all")
   const [semFilter, setSemFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
+  
+  const [notesData, setNotesData] = useState<NoteItem[]>([])
+  const [pyqData, setPyqData] = useState<PYQItem[]>([])
 
-  const filterContent = (data: any[]) => {
+  useEffect(() => {
+    setNotesData(getNotes())
+    setPyqData(getPYQs())
+  }, [])
+
+  // Get unique subjects from both notes and pyqs
+  const subjects = Array.from(new Set([
+    ...notesData.map(n => n.subject),
+    ...pyqData.map(p => p.subject)
+  ])).filter(Boolean).sort()
+
+  const filterNotes = (data: NoteItem[]) => {
     return data.filter(item => {
       const matchesSubject = subjectFilter === "all" || item.subject === subjectFilter;
-      const matchesSem = semFilter === "all" || item.sem === semFilter;
+      const matchesSem = semFilter === "all" || item.semester === semFilter;
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSubject && matchesSem && matchesSearch;
     });
   }
 
+  const filterPYQs = (data: PYQItem[]) => {
+    return data.filter(item => {
+      const matchesSubject = subjectFilter === "all" || item.subject === subjectFilter;
+      const matchesSem = semFilter === "all" || item.semester === semFilter;
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSubject && matchesSem && matchesSearch;
+    });
+  }
+
+  const handleDownload = (fileUrl: string, fileName: string) => {
+    if (fileUrl) {
+      const link = document.createElement("a")
+      link.href = fileUrl
+      link.download = fileName || "download"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <section>
-        <h2 className="text-2xl font-black text-foreground tracking-tight italic">Knowledge Vault</h2>
+        <h2 className="text-2xl font-black text-foreground">Knowledge Vault</h2>
         <p className="text-muted-foreground text-sm font-medium">Access study notes and past examination papers.</p>
       </section>
 
@@ -107,7 +120,12 @@ export default function StudentAcademicsPage() {
 
         <TabsContent value="notes" className="space-y-4 outline-none">
             <div className="grid gap-3">
-                {filterContent(notesData).map((item) => (
+                {filterNotes(notesData).length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground bg-card border border-dashed rounded-3xl">
+                    No notes found matching your filters.
+                  </div>
+                ) : (
+                  filterNotes(notesData).map((item) => (
                     <div key={item.id} className="p-4 rounded-3xl bg-card border border-border shadow-sm flex items-center gap-4 active:scale-[0.98] transition-all">
                         <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground shrink-0">
                             <FileText className="h-6 w-6" />
@@ -116,17 +134,29 @@ export default function StudentAcademicsPage() {
                             <h3 className="text-sm font-bold text-foreground truncate">{item.title}</h3>
                             <p className="text-[10px] text-muted-foreground font-bold uppercase mt-0.5">{item.subject} • {item.size}</p>
                         </div>
-                        <Button size="icon" variant="ghost" className="rounded-full h-10 w-10 text-primary bg-primary/10 hover:bg-primary/20 transition-colors">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="rounded-full h-10 w-10 text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                          onClick={() => handleDownload(item.fileUrl, item.fileName)}
+                          disabled={!item.fileUrl}
+                        >
                             <Download className="h-4 w-4" />
                         </Button>
                     </div>
-                ))}
+                  ))
+                )}
             </div>
         </TabsContent>
 
         <TabsContent value="pyqs" className="space-y-4 outline-none">
             <div className="grid gap-3">
-                {filterContent(pyqData).map((item) => (
+                {filterPYQs(pyqData).length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground bg-card border border-dashed rounded-3xl">
+                    No question papers found matching your filters.
+                  </div>
+                ) : (
+                  filterPYQs(pyqData).map((item) => (
                     <div key={item.id} className="p-4 rounded-3xl bg-card border border-border shadow-sm flex items-center gap-4 active:scale-[0.98] transition-all">
                         <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                             <Archive className="h-6 w-6" />
@@ -138,15 +168,23 @@ export default function StudentAcademicsPage() {
                                 <span className="text-[10px] text-primary font-black px-1.5 py-0.5 bg-primary/10 rounded-md tracking-tighter">{item.year}</span>
                             </div>
                         </div>
-                        <Button size="icon" variant="ghost" className="rounded-full h-10 w-10 text-primary bg-primary/10 hover:bg-primary/20 transition-all">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="rounded-full h-10 w-10 text-primary bg-primary/10 hover:bg-primary/20 transition-all"
+                          onClick={() => handleDownload(item.fileUrl, item.fileName)}
+                          disabled={!item.fileUrl}
+                        >
                             <Download className="h-4 w-4" />
                         </Button>
                     </div>
-                ))}
+                  ))
+                )}
             </div>
         </TabsContent>
       </Tabs>
     </div>
   )
 }
+
 

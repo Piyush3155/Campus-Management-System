@@ -38,9 +38,11 @@ export async function fetchUsers(page: number = 1, limit: number = 10): Promise<
 /**
  * Fetch staff members with pagination
  */
-export async function fetchStaff(page: number = 1, limit: number = 10): Promise<ActionResult<UsersResponse>> {
+export async function fetchStaff(page: number = 1, limit: number = 10, search?: string): Promise<ActionResult<UsersResponse>> {
   try {
-    const response = await secureApiClient.get<UsersResponse>(`/users?page=${page}&limit=${limit}&role=staff`);
+    let url = `/users?page=${page}&limit=${limit}&role=staff`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    const response = await secureApiClient.get<UsersResponse>(url);
 
     if (response.error) {
       return {

@@ -1,14 +1,42 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NotesList } from "@/components/staff-dashboard/notes-list"
 import { UploadNotes } from "@/components/staff-dashboard/upload-notes"
 import { FilePlus, FileText, Search, Library, Clock } from "lucide-react"
+import { getNotes } from "@/lib/storage"
 
 export default function NotesPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [activeTab, setActiveTab] = useState("list")
+  const [stats, setStats] = useState({
+    total: 0,
+    recent: 0,
+    subjects: 0,
+    mostFreq: "N/A"
+  })
+
+  useEffect(() => {
+    const notes = getNotes()
+    const uniqueSubjects = new Set(notes.map(n => n.subject)).size
+    
+    // Count recent (last 7 days) if date is available
+    const now = new Date()
+    const recentCount = notes.filter(n => {
+        const noteDate = new Date(n.date)
+        const diffTime = Math.abs(now.getTime() - noteDate.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        return diffDays <= 7
+    }).length
+
+    setStats({
+      total: notes.length,
+      recent: recentCount,
+      subjects: uniqueSubjects,
+      mostFreq: notes.length > 0 ? "Subject A" : "N/A" // Placeholder for logic
+    })
+  }, [refreshKey])
 
   const handleUploadSuccess = () => {
     setRefreshKey((prev) => prev + 1)
@@ -24,10 +52,10 @@ export default function NotesPage() {
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
-            { label: "Total Notes", value: "24", icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Recent Uploads", value: "4", icon: Clock, color: "text-green-600", bg: "bg-green-50" },
-            { label: "Subjects Covered", value: "6", icon: Library, color: "text-purple-600", bg: "bg-purple-50" },
-            { label: "Downloads", value: "1.2k", icon: Search, color: "text-orange-600", bg: "bg-orange-50" },
+            { label: "Total Notes", value: stats.total.toString(), icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
+            { label: "Recent Uploads", value: stats.recent.toString(), icon: Clock, color: "text-green-600", bg: "bg-green-50" },
+            { label: "Subjects Covered", value: stats.subjects.toString(), icon: Library, color: "text-purple-600", bg: "bg-purple-50" },
+            { label: "Viewership", value: "Live", icon: Search, color: "text-orange-600", bg: "bg-orange-50" },
         ].map((stat, i) => (
             <div key={i} className="p-4 rounded-xl border bg-card/40 backdrop-blur-sm flex items-center gap-4">
                 <div className={`p-3 rounded-lg ${stat.bg} ${stat.color} dark:bg-white/5`}>
@@ -62,3 +90,4 @@ export default function NotesPage() {
     </div>
   )
 }
+

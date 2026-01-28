@@ -276,12 +276,37 @@ export class DashboardService {
         status: t.startTime > new Date() ? 'Upcoming' : 'Completed', // Simplified
       }));
 
+    const staffSubjects = await this.prisma.staffSubject.findMany({
+      where: { staffId: userId },
+      include: { subject: true },
+    });
+
+    const activityData = await Promise.all(
+      staffSubjects.map(async (ss) => {
+        const totalRecords = await this.prisma.attendanceRecord.count({
+          where: { session: { staffId: userId, subjectId: ss.subjectId } },
+        });
+
+        const presentRecords = await this.prisma.attendanceRecord.count({
+          where: { session: { staffId: userId, subjectId: ss.subjectId }, status: 'PRESENT' },
+        });
+
+        const attendancePercentage = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0;
+
+        return {
+          name: ss.subject.name,
+          total: attendancePercentage,
+        };
+      }),
+    );
+
     const featuredEvents = await this.getFeaturedEvents();
 
     return {
       stats,
       schedule,
       featuredEvents,
+      activityData,
     };
   }
 

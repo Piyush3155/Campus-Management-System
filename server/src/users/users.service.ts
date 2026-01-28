@@ -6,11 +6,18 @@ import { Prisma, User } from '@prisma/client';
 export class UsersService {
   constructor(private prisma: PrismaService) { }
 
-  async findAll(page: number = 1, limit: number = 10, role?: string, departmentId?: string) {
+  async findAll(page: number = 1, limit: number = 10, role?: string, departmentId?: string, search?: string) {
     const skip = (page - 1) * limit;
     const where: Prisma.UserWhereInput = {};
-    if (role) where.role = role.toUpperCase() as any; // Cast to any because role is enum in Prisma but string here
+    if (role) where.role = role.toUpperCase() as any;
     if (departmentId) where.departmentId = departmentId;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search, mode: 'insensitive' } },
+      ];
+    }
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,

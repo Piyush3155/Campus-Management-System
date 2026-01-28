@@ -1,14 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PYQList } from "@/components/staff-dashboard/pyq-list"
 import { UploadPYQ } from "@/components/staff-dashboard/upload-pyq"
 import { FileSearch, FileUp, Sparkles, History } from "lucide-react"
+import { getPYQs } from "@/lib/storage"
 
 export default function PYQPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [activeTab, setActiveTab] = useState("list")
+  const [stats, setStats] = useState({
+    total: 0,
+    mostFreq: "N/A",
+    myContributions: 0
+  })
+
+  useEffect(() => {
+    const pyqs = getPYQs()
+    // Most frequent subject
+    const subjectCounts: Record<string, number> = {}
+    pyqs.forEach(p => {
+      subjectCounts[p.subject] = (subjectCounts[p.subject] || 0) + 1
+    })
+    const mostFreqSubject = Object.entries(subjectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A"
+
+    setStats({
+      total: pyqs.length,
+      mostFreq: mostFreqSubject,
+      myContributions: pyqs.length // For now, all are considered contributions as it's local storage
+    })
+  }, [refreshKey])
 
   const handleUploadSuccess = () => {
     setRefreshKey((prev) => prev + 1)
@@ -24,9 +46,9 @@ export default function PYQPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         {[
-            { label: "Available Papers", value: "112", icon: FileSearch, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Commonly Searched", value: "Math 101", icon: Sparkles, color: "text-purple-600", bg: "bg-purple-50" },
-            { label: "My Contributions", value: "8", icon: History, color: "text-orange-600", bg: "bg-orange-50" },
+            { label: "Available Papers", value: stats.total.toString(), icon: FileSearch, color: "text-blue-600", bg: "bg-blue-50" },
+            { label: "Top Subject", value: stats.mostFreq, icon: Sparkles, color: "text-purple-600", bg: "bg-purple-50" },
+            { label: "Total Contributions", value: stats.myContributions.toString(), icon: History, color: "text-orange-600", bg: "bg-orange-50" },
         ].map((stat, i) => (
             <div key={i} className="p-4 rounded-xl border bg-card/40 backdrop-blur-sm flex items-center gap-4">
                 <div className={`p-3 rounded-lg ${stat.bg} ${stat.color} dark:bg-white/5`}>
@@ -61,3 +83,4 @@ export default function PYQPage() {
     </div>
   )
 }
+

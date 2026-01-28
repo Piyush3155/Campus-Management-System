@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FileText, Download, Edit, Trash2, FileType, Filter, Search } from "lucide-react"
+import { FileText, Download, Eye, Trash2, FileType, Filter, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { getNotes, deleteNote, type NoteItem } from "@/lib/storage"
 import {
@@ -171,7 +171,7 @@ export function NotesList({ refreshKey }: NotesListProps) {
                         onClick={() => handleView(note.fileUrl)}
                         disabled={!note.fileUrl}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

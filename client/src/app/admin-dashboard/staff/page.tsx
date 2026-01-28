@@ -63,14 +63,23 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Pagination } from "@/components/ui/pagination"
+import { AssignSubjectDialog } from "@/components/admin/assign-subject-dialog"
+import { AssignClassDialog } from "@/components/admin/assign-class-dialog"
 import Link from "next/link"
 import { fetchStaff, fetchStaffStats, type StaffStats, createStaff, type CreateStaffData, fetchStaffWorkload, StaffWorkload  } from "@/app/actions/user/main"
-import type { User } from "@/app/actions/user/types"
+import type { User, UsersResponse } from "@/app/actions/user/types"
 import { fetchDepartments, type Department } from "@/app/actions/setup/main"
 import { toast } from "sonner"
 
 export default function StaffPage() {
   const [staffData, setStaffData] = useState<User[]>([])
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  })
   const [stats, setStats] = useState<StaffStats | null>(null)
   const [departments, setDepartments] = useState<Department[]>([])
   const [workloadData, setWorkloadData] = useState<StaffWorkload[]>([])
@@ -78,12 +87,26 @@ export default function StaffPage() {
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
 
-  const loadData = async () => {
+  // Assignment Dialogs State
+  const [selectedStaff, setSelectedStaff] = useState<User | null>(null)
+  const [assignSubjectOpen, setAssignSubjectOpen] = useState(false)
+  const [assignClassOpen, setAssignClassOpen] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const loadData = async (page: number = 1, search?: string) => {
     try {
       setLoading(true)
       const [staffRes, statsRes, deptRes, workloadRes] = await Promise.all([
-        fetchStaff(),
+        fetchStaff(page, 10, search),
         fetchStaffStats(),
         fetchDepartments(),
         fetchStaffWorkload()
@@ -91,6 +114,7 @@ export default function StaffPage() {
 
       if (staffRes.success && staffRes.data) {
         setStaffData(staffRes.data.users)
+        setPagination(staffRes.data.pagination)
       }
 
       if (statsRes.success && statsRes.data) {
@@ -118,8 +142,16 @@ export default function StaffPage() {
   }
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData(1, debouncedSearch)
+  }, [debouncedSearch])
+
+  const onPageChange = (page: number) => {
+    loadData(page, debouncedSearch)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }
 
   const handleAddStaff = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -140,7 +172,7 @@ export default function StaffPage() {
     if (result.success) {
       toast.success("Staff member created successfully")
       setOpen(false)
-      loadData() // Refresh list
+      loadData(pagination.page) // Refresh list
     } else {
       toast.error(result.error || "Failed to create staff member")
     }
@@ -301,6 +333,8 @@ export default function StaffPage() {
                 type="search"
                 placeholder="Search staff..."
                 className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
+                value={searchQuery}
+                onChange={handleSearchChange}
               />
             </div>
           </div>
@@ -354,8 +388,18 @@ export default function StaffPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem>Edit Details</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>Assign Subject</DropdownMenuItem>
-                            <DropdownMenuItem>Assign Class</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedStaff(staff)
+                              setAssignSubjectOpen(true)
+                            }}>
+                              Assign Subject
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedStaff(staff)
+                              setAssignClassOpen(true)
+                            }}>
+                              Assign Class
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -363,6 +407,15 @@ export default function StaffPage() {
                   ))}
                 </TableBody>
               </Table>
+              {pagination.totalPages > 1 && (
+                <div className="py-4 border-t">
+                  <Pagination
+                    currentPage={pagination.page}
+                    totalPages={pagination.totalPages}
+                    onPageChange={onPageChange}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -450,6 +503,25 @@ export default function StaffPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {selectedStaff && (
+        <>
+          <AssignSubjectDialog
+            staffId={selectedStaff.id}
+            staffName={selectedStaff.name}
+            open={assignSubjectOpen}
+            onOpenChange={setAssignSubjectOpen}
+            onSuccess={() => loadData(pagination.page, debouncedSearch)}
+          />
+          <AssignClassDialog
+            staffId={selectedStaff.id}
+            staffName={selectedStaff.name}
+            open={assignClassOpen}
+            onOpenChange={setAssignClassOpen}
+            onSuccess={() => loadData(pagination.page, debouncedSearch)}
+          />
+        </>
+      )}
     </div>
   )
 }

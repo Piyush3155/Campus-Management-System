@@ -47,6 +47,9 @@ export class NoticesService {
                 whereClause.role = CMSUserRole.STAFF;
             } else if (notice.audience === NoticeAudience.STUDENTS) {
                 whereClause.role = CMSUserRole.STUDENT;
+            } else if (notice.audience === NoticeAudience.ACADEMIC) {
+                // Academic notices are for both, so we allow both roles
+                whereClause.role = { in: [CMSUserRole.STAFF, CMSUserRole.STUDENT] };
             }
             // For ALL, we don't add role filter
 

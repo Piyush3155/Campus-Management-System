@@ -26,7 +26,7 @@ interface StatItem {
 
 export function StaffStatsCards({ stats }: { stats: StatItem[] }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
       {stats.map((stat) => {
         const Icon = iconMap[stat.icon] || Users
         return (
