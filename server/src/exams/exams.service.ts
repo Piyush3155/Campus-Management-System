@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateExamDto, UpdateExamDto } from './dto/exam.dto';
+import { CreateExamDto, UpdateExamDto, SubmitMarksDto } from './dto/exam.dto';
 import { ExamStatus } from '@prisma/client';
 
 @Injectable()
@@ -140,4 +140,163 @@ export class ExamsService {
             };
         }).filter(s => s !== null);
     }
+
+    async submitMarks(submitMarksDto: SubmitMarksDto) {
+        const { examId, subjectId, semester, assessmentType, maxMarks, marks } = submitMarksDto;
+
+        // Verify exam exists
+        const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
+        if (!exam) {
+            throw new NotFoundException(`Exam with ID ${examId} not found`);
+        }
+
+        // Verify subject exists
+        const subject = await this.prisma.subject.findUnique({ where: { id: subjectId } });
+        if (!subject) {
+            throw new NotFoundException(`Subject with ID ${subjectId} not found`);
+        }
+
+        // Validate marks
+        for (const mark of marks) {
+            if (mark.marks > maxMarks) {
+                throw new BadRequestException(`Marks ${mark.marks} exceeds maximum ${maxMarks}`);
+            }
+        }
+
+        // Create or update internal marks for each student
+        const results = await Promise.all(
+            marks.map(async (mark) => {
+                return this.prisma.internalMark.upsert({
+                    where: {
+                        studentId_subjectId_semester_assessmentType: {
+                            studentId: mark.studentId,
+                            subjectId: subjectId,
+                            semester: semester,
+                            assessmentType: assessmentType,
+                        },
+                    },
+                    update: {
+                        marks: mark.marks,
+                        maxMarks: maxMarks,
+                    },
+                    create: {
+                        studentId: mark.studentId,
+                        subjectId: subjectId,
+                        semester: semester,
+                        assessmentType: assessmentType,
+                        marks: mark.marks,
+                        maxMarks: maxMarks,
+                    },
+                });
+            })
+        );
+
+        return {
+            success: true,
+            message: `Successfully submitted marks for ${results.length} students`,
+            count: results.length,
+        };
+    }
+
+    async getStudentsForMarksEntry(examId: string, subjectId: string, semester: number) {
+        // Verify exam exists
+        const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
+        if (!exam) {
+            throw new NotFoundException(`Exam with ID ${examId} not found`);
+        }
+
+        // Verify subject exists
+        const subject = await this.prisma.subject.findUnique({ where: { id: subjectId } });
+        if (!subject) {
+            throw new NotFoundException(`Subject with ID ${subjectId} not found`);
+        }
+
+        // Find all students in the specified semester
+        const students = await this.prisma.user.findMany({
+            where: {
+                role: 'STUDENT',
+                isActive: true,
+                profile: {
+                    semester: semester,
+                },
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                profile: {
+                    select: {
+                        regno: true,
+                    },
+                },
+            },
+            orderBy: {
+                profile: {
+                    regno: 'asc',
+                },
+            },
+        });
+
+        return students;
+    }
+
+    async getStaffExams(staffId: string) {
+        // Get staff's department
+        const staff = await this.prisma.user.findUnique({
+            where: { id: staffId },
+            select: { departmentId: true },
+        });
+
+        if (!staff || !staff.departmentId) {
+            throw new NotFoundException('Staff not found or not assigned to a department');
+        }
+
+        // Return all exams (exams are not department-specific in current schema)
+        // In future, you might want to add departmentId to Exam model
+        return this.prisma.exam.findMany({
+            where: {
+                status: {
+                    in: [ExamStatus.SCHEDULED, ExamStatus.COMPLETED],
+                },
+            },
+            orderBy: { date: 'desc' },
+        });
+    }
+
+    async getStaffSubjects(staffId: string) {
+        // Get staff's department and assigned subjects
+        const staff = await this.prisma.user.findUnique({
+            where: { id: staffId },
+            include: {
+                department: true,
+                staffSubjects: {
+                    include: {
+                        subject: {
+                            include: {
+                                department: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!staff) {
+            throw new NotFoundException('Staff not found');
+        }
+
+        // Return subjects assigned to this staff
+        return {
+            department: staff.department,
+            subjects: staff.staffSubjects.map(ss => ({
+                id: ss.subject.id,
+                name: ss.subject.name,
+                code: ss.subject.code,
+                semester: ss.subject.semester,
+                credits: ss.subject.credits,
+                department: ss.subject.department,
+            })),
+        };
+    }
 }
+
