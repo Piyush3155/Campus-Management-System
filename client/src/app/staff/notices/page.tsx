@@ -19,9 +19,9 @@ export default function NoticesPage() {
 
   const loadNotices = useCallback(async () => {
     setLoading(true)
-    const res = await fetchNotices()
+    const res = await fetchNotices({ limit: 100 }) // Fetch more for stats on this page
     if (res.success && res.data) {
-      setNotices(res.data)
+      setNotices(res.data.notices)
     } else {
       toast.error(res.error || "Failed to load notices")
     }

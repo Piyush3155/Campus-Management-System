@@ -85,29 +85,67 @@ export class NoticesService {
         }
     }
 
-    async findAll(audience?: NoticeAudience) {
-        const whereClause = audience ? {
-            OR: [
+    async findAll(audience?: NoticeAudience, page: number = 1, limit: number = 10, search?: string) {
+        const skip = (page - 1) * limit;
+        
+        const whereClause: any = {};
+        
+        if (audience) {
+            whereClause.OR = [
                 { audience: NoticeAudience.ALL },
                 { audience },
-            ]
-        } : {};
+            ];
+        }
 
-        return this.prisma.notice.findMany({
-            where: whereClause,
-            orderBy: [
-                { pinned: 'desc' },
-                { createdAt: 'desc' },
-            ],
-            include: {
-                author: {
-                    select: {
-                        name: true,
-                        role: true,
+        if (search) {
+            const searchFilter = {
+                OR: [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { content: { contains: search, mode: 'insensitive' } },
+                ]
+            };
+            
+            if (whereClause.OR) {
+                // If we already have an OR for audience, we need to AND it with the search OR
+                const audienceOr = whereClause.OR;
+                delete whereClause.OR;
+                whereClause.AND = [
+                    { OR: audienceOr },
+                    searchFilter
+                ];
+            } else {
+                whereClause.OR = searchFilter.OR;
+            }
+        }
+
+        const [total, notices] = await Promise.all([
+            this.prisma.notice.count({ where: whereClause }),
+            this.prisma.notice.findMany({
+                where: whereClause,
+                orderBy: [
+                    { pinned: 'desc' },
+                    { createdAt: 'desc' },
+                ],
+                skip,
+                take: Number(limit),
+                include: {
+                    author: {
+                        select: {
+                            name: true,
+                            role: true,
+                        }
                     }
                 }
-            }
-        });
+            })
+        ]);
+
+        return {
+            notices,
+            total,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(total / limit)
+        };
     }
 
     async findOne(id: string) {

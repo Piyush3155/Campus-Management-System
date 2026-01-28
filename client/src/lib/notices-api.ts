@@ -24,11 +24,33 @@ export interface Notice {
     updatedAt: string;
 }
 
-export async function fetchNotices(audience?: string): Promise<ActionResult<Notice[]>> {
+export interface PaginatedNotices {
+    notices: Notice[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export async function fetchNotices(params?: { 
+    audience?: string; 
+    page?: number; 
+    limit?: number; 
+    search?: string;
+}): Promise<ActionResult<PaginatedNotices>> {
     try {
         const url = new URL(`${API_URL}/notices`);
-        if (audience && audience !== 'all') {
-            url.searchParams.append('audience', audience.toUpperCase());
+        if (params?.audience && params.audience !== 'all') {
+            url.searchParams.append('audience', params.audience.toUpperCase());
+        }
+        if (params?.page) {
+            url.searchParams.append('page', params.page.toString());
+        }
+        if (params?.limit) {
+            url.searchParams.append('limit', params.limit.toString());
+        }
+        if (params?.search) {
+            url.searchParams.append('search', params.search);
         }
 
         const response = await fetch(url.toString(), {
