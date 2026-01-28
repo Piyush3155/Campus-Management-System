@@ -1,11 +1,20 @@
 "use client"
 
+import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NotesList } from "@/components/staff-dashboard/notes-list"
 import { UploadNotes } from "@/components/staff-dashboard/upload-notes"
 import { FilePlus, FileText, Search, Library, Clock } from "lucide-react"
 
 export default function NotesPage() {
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [activeTab, setActiveTab] = useState("list")
+
+  const handleUploadSuccess = () => {
+    setRefreshKey((prev) => prev + 1)
+    setActiveTab("list")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -32,7 +41,7 @@ export default function NotesPage() {
         ))}
       </div>
 
-      <Tabs defaultValue="list" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-muted/50 p-1">
           <TabsTrigger value="list" className="flex items-center gap-2">
             <Library className="h-4 w-4" /> My Notes
@@ -43,11 +52,11 @@ export default function NotesPage() {
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
-          <NotesList />
+          <NotesList refreshKey={refreshKey} />
         </TabsContent>
 
         <TabsContent value="upload" className="space-y-4">
-          <UploadNotes />
+          <UploadNotes onSuccess={handleUploadSuccess} />
         </TabsContent>
       </Tabs>
     </div>

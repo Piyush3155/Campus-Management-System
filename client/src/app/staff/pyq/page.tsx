@@ -1,11 +1,20 @@
 "use client"
 
+import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PYQList } from "@/components/staff-dashboard/pyq-list"
 import { UploadPYQ } from "@/components/staff-dashboard/upload-pyq"
 import { FileSearch, FileUp, Sparkles, History } from "lucide-react"
 
 export default function PYQPage() {
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [activeTab, setActiveTab] = useState("list")
+
+  const handleUploadSuccess = () => {
+    setRefreshKey((prev) => prev + 1)
+    setActiveTab("list")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -31,7 +40,7 @@ export default function PYQPage() {
         ))}
       </div>
 
-      <Tabs defaultValue="list" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-muted/50 p-1">
           <TabsTrigger value="list" className="flex items-center gap-2">
             <FileSearch className="h-4 w-4" /> Browse PYQs
@@ -42,11 +51,11 @@ export default function PYQPage() {
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
-          <PYQList />
+          <PYQList refreshKey={refreshKey} />
         </TabsContent>
 
         <TabsContent value="upload" className="space-y-4">
-          <UploadPYQ />
+          <UploadPYQ onSuccess={handleUploadSuccess} />
         </TabsContent>
       </Tabs>
     </div>
