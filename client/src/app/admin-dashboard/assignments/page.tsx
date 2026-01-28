@@ -12,7 +12,9 @@ import {
     Users,
     Loader2,
     Trash2,
-    FilePlus
+    FilePlus,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -58,6 +60,10 @@ export default function AdminAssignmentsPage() {
     const [error, setError] = React.useState<string | null>(null)
     const [searchTerm, setSearchTerm] = React.useState("")
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = React.useState(1)
+    const itemsPerPage = 10
+
     React.useEffect(() => {
         loadAssignments()
     }, [])
@@ -91,6 +97,24 @@ export default function AdminAssignmentsPage() {
         a.author?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.subject?.name?.toLowerCase().includes(searchTerm.toLowerCase())
     )
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredAssignments.length / itemsPerPage)
+    const paginatedAssignments = filteredAssignments.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    )
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage)
+        }
+    }
+
+    // Reset to page 1 when search changes
+    React.useEffect(() => {
+        setCurrentPage(1)
+    }, [searchTerm])
 
     return (
         <div className="flex flex-col gap-6 p-6">
@@ -205,11 +229,11 @@ export default function AdminAssignmentsPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredAssignments.length === 0 ? (
+                                        {paginatedAssignments.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No assignments found.</TableCell>
                                             </TableRow>
-                                        ) : filteredAssignments.map(assign => (
+                                        ) : paginatedAssignments.map(assign => (
                                             <TableRow key={assign.id}>
                                                 <TableCell className="font-medium pl-6">
                                                     <div className="font-bold">{assign.title}</div>
@@ -249,6 +273,59 @@ export default function AdminAssignmentsPage() {
                                 </Table>
                             )}
                         </CardContent>
+                        {/* Pagination Controls */}
+                        {!loading && totalPages > 1 && (
+                            <div className="flex items-center justify-between px-6 py-4 border-t">
+                                <div className="text-sm text-muted-foreground">
+                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAssignments.length)} of {filteredAssignments.length} assignments
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Previous
+                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum: number;
+                                            if (totalPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage >= totalPages - 2) {
+                                                pageNum = totalPages - 4 + i;
+                                            } else {
+                                                pageNum = currentPage - 2 + i;
+                                            }
+                                            return (
+                                                <Button
+                                                    key={pageNum}
+                                                    variant={currentPage === pageNum ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="w-8 h-8 p-0"
+                                                    onClick={() => handlePageChange(pageNum)}
+                                                >
+                                                    {pageNum}
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </Card>
                 </TabsContent>
 

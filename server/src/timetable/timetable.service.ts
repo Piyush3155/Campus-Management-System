@@ -165,6 +165,16 @@ export class TimetableService {
     }
 
     async deleteEntry(id: string) {
-        return this.prisma.timeTable.delete({ where: { id } });
+        // Delete related AttendanceSession records first (and their AttendanceRecords via cascade)
+        // Then delete the TimeTable entry
+        return this.prisma.$transaction(async (tx) => {
+            // First, delete all AttendanceSessions that reference this timetable
+            await tx.attendanceSession.deleteMany({
+                where: { timetableId: id }
+            });
+
+            // Then delete the timetable entry
+            return tx.timeTable.delete({ where: { id } });
+        });
     }
 }

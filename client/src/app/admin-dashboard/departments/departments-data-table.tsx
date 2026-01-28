@@ -197,7 +197,7 @@ export function DepartmentsDataTable({
                     </TableCell>
                   )}
                   {visibleCols.users && (
-                    <TableCell>{dept.users?.length ?? 0}</TableCell>
+                    <TableCell>{dept._count?.users ?? 0}</TableCell>
                   )}
                   <TableCell className="text-right">
                     <DropdownMenu>

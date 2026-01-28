@@ -8,13 +8,22 @@ import {
     BarChart3,
     Plus,
     MoreVertical,
-    Download} from "lucide-react"
+    Download,
+    ChevronLeft,
+    ChevronRight,
+    Trash2,
+    Edit,
+    Eye,
+    Users,
+    TrendingUp
+} from "lucide-react"
 
 import {
     fetchExams,
     fetchExamStats,
     fetchResultOverview,
-    updateExam
+    updateExam,
+    deleteExam
 } from "@/app/actions/exams/main"
 import { Exam, ExamStats, ResultOverview, ExamType } from "@/app/actions/exams/types"
 import { format } from "date-fns"
@@ -63,6 +72,14 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
     BarChart,
     Bar,
     XAxis,
@@ -89,9 +106,15 @@ export default function ExamsPage() {
     const [results, setResults] = React.useState<ResultOverview[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const itemsPerPage = 10;
+
     // Form State
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [isDetailOpen, setIsDetailOpen] = React.useState(false);
+    const [selectedResult, setSelectedResult] = React.useState<ResultOverview | null>(null);
     const [formData, setFormData] = React.useState({
         name: "",
         code: "",
@@ -175,6 +198,19 @@ export default function ExamsPage() {
             toast.error(res.error || "Failed to schedule exam");
         }
         setIsSubmitting(false);
+    };
+
+    // Pagination logic
+    const totalPages = Math.ceil(exams.length / itemsPerPage);
+    const paginatedExams = exams.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
     };
 
     if (isLoading && !exams.length) {
@@ -277,7 +313,7 @@ export default function ExamsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {exams.map(exam => (
+                                    {paginatedExams.map(exam => (
                                         <TableRow key={exam.id}>
                                             <TableCell className="font-medium">{exam.name}</TableCell>
                                             <TableCell>{exam.code}</TableCell>
@@ -295,7 +331,35 @@ export default function ExamsPage() {
                                                 <Badge variant={exam.status === "SCHEDULED" ? "default" : "secondary"}>{exam.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem>
+                                                            <Edit className="h-4 w-4 mr-2" /> Edit Exam
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-destructive"
+                                                            onClick={async () => {
+                                                                if (!confirm("Are you sure you want to delete this exam?")) return;
+                                                                const res = await deleteExam(exam.id);
+                                                                if (res.success) {
+                                                                    toast.success("Exam deleted successfully");
+                                                                    loadData();
+                                                                } else {
+                                                                    toast.error(res.error || "Failed to delete exam");
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-2" /> Delete Exam
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -307,6 +371,59 @@ export default function ExamsPage() {
                                 </TableBody>
                             </Table>
                         </CardContent>
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-6 py-4 border-t">
+                                <div className="text-sm text-muted-foreground">
+                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, exams.length)} of {exams.length} exams
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Previous
+                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum: number;
+                                            if (totalPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage >= totalPages - 2) {
+                                                pageNum = totalPages - 4 + i;
+                                            } else {
+                                                pageNum = currentPage - 2 + i;
+                                            }
+                                            return (
+                                                <Button
+                                                    key={pageNum}
+                                                    variant={currentPage === pageNum ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="w-8 h-8 p-0"
+                                                    onClick={() => handlePageChange(pageNum)}
+                                                >
+                                                    {pageNum}
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </Card>
                 </TabsContent>
 
@@ -352,7 +469,17 @@ export default function ExamsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="outline" size="sm">View Details</Button>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedResult(result);
+                                                        setIsDetailOpen(true);
+                                                    }}
+                                                >
+                                                    <Eye className="h-4 w-4 mr-2" />
+                                                    View Details
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -491,6 +618,113 @@ export default function ExamsPage() {
                         <Button onClick={handleCreateExam} disabled={isSubmitting}>
                             {isSubmitting ? "Scheduling..." : "Schedule Exam"}
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Result Details Dialog */}
+            <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Result Details</DialogTitle>
+                        <DialogDescription>
+                            Detailed performance overview for this subject.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedResult && (
+                        <div className="space-y-6 py-4">
+                            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                                <div>
+                                    <h3 className="font-semibold text-lg">{selectedResult.subject}</h3>
+                                    <p className="text-sm text-muted-foreground">Code: {selectedResult.code}</p>
+                                </div>
+                                <Badge variant={selectedResult.published ? "default" : "secondary"}>
+                                    {selectedResult.published ? "Published" : "Draft"}
+                                </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <Card>
+                                    <CardContent className="pt-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
+                                                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Total Students</p>
+                                                <p className="text-2xl font-bold">{selectedResult.totalStudents}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardContent className="pt-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-full">
+                                                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Average Grade</p>
+                                                <p className="text-2xl font-bold">{selectedResult.avgGrade}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <Card className="border-green-200 dark:border-green-800">
+                                    <CardContent className="pt-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
+                                                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Passed</p>
+                                                <p className="text-2xl font-bold text-green-600">{selectedResult.passed}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="border-red-200 dark:border-red-800">
+                                    <CardContent className="pt-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-full">
+                                                <Clock className="h-5 w-5 text-red-600 dark:text-red-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Failed</p>
+                                                <p className="text-2xl font-bold text-red-600">{selectedResult.failed}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-medium">Pass Rate</span>
+                                    <span className="text-sm font-bold">
+                                        {selectedResult.totalStudents > 0 
+                                            ? Math.round((selectedResult.passed / selectedResult.totalStudents) * 100)
+                                            : 0}%
+                                    </span>
+                                </div>
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                                    <div 
+                                        className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                                        style={{ 
+                                            width: `${selectedResult.totalStudents > 0 
+                                                ? (selectedResult.passed / selectedResult.totalStudents) * 100 
+                                                : 0}%` 
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

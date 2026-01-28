@@ -35,11 +35,11 @@ const adminNav = [
     url: "/admin-dashboard",
     icon: IconDashboard,
   },
-  {
-    title: "Users",
-    url: "/admin-dashboard/users",
-    icon: IconUsers,
-  },
+  // {
+  //   title: "Users",
+  //   url: "/admin-dashboard/users",
+  //   icon: IconUsers,
+  // },
   {
     title: "Departments",
     url: "/admin-dashboard/departments",

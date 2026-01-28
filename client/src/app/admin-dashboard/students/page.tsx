@@ -11,7 +11,9 @@ import {
     Plus,
     AlertCircle,
     Download,
-    Upload
+    Upload,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react"
 import Link from "next/link"
 import Papa from "papaparse"
@@ -103,12 +105,23 @@ export default function StudentsPage() {
         semester: 1,
         section: "A"
     })
+    // Pagination state
+    const [currentPage, setCurrentPage] = React.useState(1)
+    const [totalPages, setTotalPages] = React.useState(1)
+    const [totalStudents, setTotalStudents] = React.useState(0)
+    const itemsPerPage = 10
+
+    // Promotion settings state
+    const [promotionFromCourse, setPromotionFromCourse] = React.useState<string>("all")
+    const [promotionFromSemester, setPromotionFromSemester] = React.useState<number>(1)
+    const [promotionToSemester, setPromotionToSemester] = React.useState<number>(2)
+    const [promotionToSection, setPromotionToSection] = React.useState<string>("keep-same")
 
     const loadData = React.useCallback(async () => {
         try {
             setLoading(true)
             const [studentsRes, statsRes, coursesRes, deptsRes] = await Promise.all([
-                fetchStudents(1, 50, searchTerm, selectedCourse === "all" ? undefined : selectedCourse),
+                fetchStudents(currentPage, itemsPerPage, searchTerm, selectedCourse === "all" ? undefined : selectedCourse),
                 fetchStudentStats(),
                 fetchCourses(),
                 fetchDepartments()
@@ -116,6 +129,8 @@ export default function StudentsPage() {
 
             if (studentsRes.success && studentsRes.data) {
                 setStudents(studentsRes.data.students || [])
+                setTotalPages(studentsRes.data.pagination?.totalPages || 1)
+                setTotalStudents(studentsRes.data.pagination?.total || 0)
             }
 
             if (statsRes.success && statsRes.data) {
@@ -139,11 +154,22 @@ export default function StudentsPage() {
         } finally {
             setLoading(false)
         }
-    }, [searchTerm, selectedCourse])
+    }, [searchTerm, selectedCourse, currentPage])
 
     React.useEffect(() => {
         loadData()
     }, [loadData])
+
+    // Reset to page 1 when search or filter changes
+    React.useEffect(() => {
+        setCurrentPage(1)
+    }, [searchTerm, selectedCourse])
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage)
+        }
+    }
 
     const toggleStudent = (id: string) => {
         setSelectedStudents(prev =>
@@ -195,10 +221,10 @@ export default function StudentsPage() {
     }
 
     const handleBulkPromote = async () => {
-        // For demo, promoting to semester 2
         const result = await bulkPromoteStudents({
             studentIds: selectedStudents,
-            targetSemester: 2
+            targetSemester: promotionToSemester,
+            section: promotionToSection !== "keep-same" ? promotionToSection : undefined
         })
 
         if (result.success) {
@@ -315,7 +341,11 @@ export default function StudentsPage() {
     }
 
     const promotionCandidates = Array.isArray(students)
-        ? students.filter(s => s.profile?.semester === 1)
+        ? students.filter(s => {
+            const matchesSemester = s.profile?.semester === promotionFromSemester
+            const matchesCourse = promotionFromCourse === "all" || s.department?.id === promotionFromCourse
+            return matchesSemester && matchesCourse
+        })
         : []
 
     return (
@@ -616,6 +646,60 @@ export default function StudentsPage() {
                                 </TableBody>
                             </Table>
                         </CardContent>
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-6 py-4 border-t">
+                                <div className="text-sm text-muted-foreground">
+                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalStudents)} of {totalStudents} students
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1 || loading}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Previous
+                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum: number;
+                                            if (totalPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage >= totalPages - 2) {
+                                                pageNum = totalPages - 4 + i;
+                                            } else {
+                                                pageNum = currentPage - 2 + i;
+                                            }
+                                            return (
+                                                <Button
+                                                    key={pageNum}
+                                                    variant={currentPage === pageNum ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="w-8 h-8 p-0"
+                                                    onClick={() => handlePageChange(pageNum)}
+                                                    disabled={loading}
+                                                >
+                                                    {pageNum}
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages || loading}
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </Card>
                 </TabsContent>
 
@@ -631,20 +715,30 @@ export default function StudentsPage() {
                                     <h3 className="font-semibold text-sm text-muted-foreground mb-2">Promote From</h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label>Course</Label>
-                                            <Select defaultValue="bca">
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <Label>Course/Department</Label>
+                                            <Select value={promotionFromCourse} onValueChange={setPromotionFromCourse}>
+                                                <SelectTrigger><SelectValue placeholder="Select Course" /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="bca">BCA</SelectItem>
+                                                    <SelectItem value="all">All Courses</SelectItem>
+                                                    {Array.isArray(departments) && departments.map(dept => (
+                                                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Current Semester</Label>
-                                            <Select defaultValue="sem1">
+                                            <Select value={promotionFromSemester.toString()} onValueChange={(v) => {
+                                                const sem = parseInt(v)
+                                                setPromotionFromSemester(sem)
+                                                // Auto-update target semester to next one
+                                                if (sem < 8) setPromotionToSemester(sem + 1)
+                                            }}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="sem1">Semester 1</SelectItem>
+                                                    {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                                                        <SelectItem key={sem} value={sem.toString()}>Semester {sem}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -660,20 +754,25 @@ export default function StudentsPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label>Target Semester</Label>
-                                            <Select defaultValue="sem2">
+                                            <Select value={promotionToSemester.toString()} onValueChange={(v) => setPromotionToSemester(parseInt(v))}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="sem2">Semester 2</SelectItem>
+                                                    {[1, 2, 3, 4, 5, 6, 7, 8].filter(sem => sem > promotionFromSemester).map(sem => (
+                                                        <SelectItem key={sem} value={sem.toString()}>Semester {sem}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
                                             <Label>New Section (Optional)</Label>
-                                            <Select>
+                                            <Select value={promotionToSection} onValueChange={setPromotionToSection}>
                                                 <SelectTrigger><SelectValue placeholder="Keep Same" /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="a">Section A</SelectItem>
-                                                    <SelectItem value="b">Section B</SelectItem>
+                                                    <SelectItem value="keep-same">Keep Same</SelectItem>
+                                                    <SelectItem value="A">Section A</SelectItem>
+                                                    <SelectItem value="B">Section B</SelectItem>
+                                                    <SelectItem value="C">Section C</SelectItem>
+                                                    <SelectItem value="D">Section D</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
