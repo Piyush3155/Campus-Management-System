@@ -304,22 +304,51 @@ async function main() {
   }
 
   // ===========================
-  // ASSIGN STAFF TO SUBJECTS
+  // ASSIGN STAFF TO SUBJECTS (Properly mapped by expertise)
   // ===========================
   console.log('\n👨‍🏫 Assigning staff to subjects...');
 
-  for (const staff of staffUsers) {
-    const deptSubjects = subjects.filter(s => s.departmentId === staff.departmentId);
-    const subjectsToAssign = deptSubjects.slice(0, 5);
+  // Define staff-subject mappings by email and subject codes
+  const staffSubjectMappings: { email: string; subjectCodes: string[] }[] = [
+    // Computer Science Department
+    { email: 'rajesh.cs@campus.edu', subjectCodes: ['BCA101', 'BCA201', 'BCA301', 'BCA401'] }, // Programming, Data Structures, DBMS, Web Tech
+    { email: 'meena.cs@campus.edu', subjectCodes: ['BCA102', 'BCA202', 'BCA302', 'BCA502'] }, // Digital Electronics, OOP, OS, ML
+    { email: 'arun.cs@campus.edu', subjectCodes: ['BCA103', 'BCA402', 'BCA501', 'BCA601', 'BCA602'] }, // Math, Networks, SE, Mobile, Cloud
+    
+    // Business Administration Department
+    { email: 'priya.ba@campus.edu', subjectCodes: ['BBA101', 'BBA201', 'BBA301'] }, // Management, Accounting, Marketing
+    { email: 'rohit.ba@campus.edu', subjectCodes: ['BBA102', 'BBA103', 'BBA202', 'BBA401'] }, // Business Math, Communication, OB, HR
+    
+    // Commerce Department
+    { email: 'amit.com@campus.edu', subjectCodes: ['BCOM101', 'BCOM201', 'BCOM301', 'BCOM401'] }, // Accounting, Cost Accounting, Tax, Audit
+    { email: 'kavita.com@campus.edu', subjectCodes: ['BCOM102', 'BCOM103', 'BCOM202'] }, // Business Law, Economics, Corporate Law
+    
+    // Science Department
+    { email: 'sunita.sci@campus.edu', subjectCodes: ['MATH101', 'MATH102', 'MATH301'] }, // Calculus, Linear Algebra, Real Analysis
+    { email: 'ramesh.sci@campus.edu', subjectCodes: ['MATH201', 'MATH202'] }, // Differential Equations, Statistics
+    
+    // Arts Department
+    { email: 'vikram.art@campus.edu', subjectCodes: ['ENG101', 'ENG201', 'ENG301'] }, // English Lit, American Lit, Modern Poetry
+    { email: 'neha.art@campus.edu', subjectCodes: ['ENG102', 'ENG202'] }, // Creative Writing, British Lit
+  ];
 
-    for (const subject of subjectsToAssign) {
-      await prisma.staffSubject.upsert({
-        where: { staffId_subjectId: { staffId: staff.id, subjectId: subject.id } },
-        update: {},
-        create: { staffId: staff.id, subjectId: subject.id },
-      });
+  for (const mapping of staffSubjectMappings) {
+    const staff = staffUsers.find(s => s.email === mapping.email);
+    if (!staff) continue;
+
+    const assignedSubjects: string[] = [];
+    for (const subjectCode of mapping.subjectCodes) {
+      const subject = subjects.find(s => s.code === subjectCode);
+      if (subject) {
+        await prisma.staffSubject.upsert({
+          where: { staffId_subjectId: { staffId: staff.id, subjectId: subject.id } },
+          update: {},
+          create: { staffId: staff.id, subjectId: subject.id },
+        });
+        assignedSubjects.push(subjectCode);
+      }
     }
-    console.log(`   ✓ Assigned ${staff.name} to ${subjectsToAssign.length} subjects`);
+    console.log(`   ✓ ${staff.name}: ${assignedSubjects.join(', ')}`);
   }
 
   // ===========================
@@ -331,60 +360,85 @@ async function main() {
   const studentRole = await prisma.role.findUnique({ where: { name: 'STUDENT' } });
 
   const studentNames = [
-    // Computer Science Students (15 students)
-    { name: 'Arjun Mehta', semester: 5, section: 'A', deptId: csDept.id },
-    { name: 'Priyanka Reddy', semester: 5, section: 'A', deptId: csDept.id },
-    { name: 'Rahul Nair', semester: 5, section: 'B', deptId: csDept.id },
-    { name: 'Sneha Gupta', semester: 5, section: 'B', deptId: csDept.id },
-    { name: 'Vikash Singh', semester: 3, section: 'A', deptId: csDept.id },
-    { name: 'Ananya Sharma', semester: 3, section: 'A', deptId: csDept.id },
-    { name: 'Karthik Iyer', semester: 3, section: 'B', deptId: csDept.id },
-    { name: 'Divya Krishnan', semester: 1, section: 'A', deptId: csDept.id },
-    { name: 'Aditya Verma', semester: 1, section: 'A', deptId: csDept.id },
-    { name: 'Pooja Malhotra', semester: 1, section: 'B', deptId: csDept.id },
-    { name: 'Suresh Kumar', semester: 1, section: 'B', deptId: csDept.id },
-    { name: 'Deepika Patel', semester: 3, section: 'B', deptId: csDept.id },
-    { name: 'Mohit Sharma', semester: 5, section: 'A', deptId: csDept.id },
-    { name: 'Ritika Singh', semester: 5, section: 'B', deptId: csDept.id },
-    { name: 'Rohit Choudhury', semester: 3, section: 'A', deptId: csDept.id },
+    // =====================================
+    // Computer Science Department - BCA
+    // =====================================
+    // Semester 1 (Freshers)
+    { name: 'Divya Krishnan', semester: 1, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Aditya Verma', semester: 1, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Pooja Malhotra', semester: 1, section: 'B', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Suresh Kumar', semester: 1, section: 'B', deptId: csDept.id, courseCode: 'BCA' },
+    // Semester 3
+    { name: 'Vikash Singh', semester: 3, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Ananya Sharma', semester: 3, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Karthik Iyer', semester: 3, section: 'B', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Deepika Patel', semester: 3, section: 'B', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Rohit Choudhury', semester: 3, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    // Semester 5 (Final Year)
+    { name: 'Arjun Mehta', semester: 5, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Priyanka Reddy', semester: 5, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Rahul Nair', semester: 5, section: 'B', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Sneha Gupta', semester: 5, section: 'B', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Mohit Sharma', semester: 5, section: 'A', deptId: csDept.id, courseCode: 'BCA' },
+    { name: 'Ritika Singh', semester: 5, section: 'B', deptId: csDept.id, courseCode: 'BCA' },
 
-    // Business Administration Students (10 students)
-    { name: 'Nisha Agarwal', semester: 3, section: 'A', deptId: baDept.id },
-    { name: 'Amit Saxena', semester: 3, section: 'A', deptId: baDept.id },
-    { name: 'Swati Joshi', semester: 1, section: 'A', deptId: baDept.id },
-    { name: 'Rajat Kapoor', semester: 1, section: 'B', deptId: baDept.id },
-    { name: 'Megha Bhatia', semester: 5, section: 'A', deptId: baDept.id },
-    { name: 'Siddharth Roy', semester: 5, section: 'A', deptId: baDept.id },
-    { name: 'Kavya Menon', semester: 3, section: 'B', deptId: baDept.id },
-    { name: 'Ravi Shankar', semester: 1, section: 'A', deptId: baDept.id },
-    { name: 'Pallavi Desai', semester: 1, section: 'B', deptId: baDept.id },
-    { name: 'Kunal Thakur', semester: 5, section: 'B', deptId: baDept.id },
+    // =====================================
+    // Business Administration Department - BBA
+    // =====================================
+    // Semester 1
+    { name: 'Swati Joshi', semester: 1, section: 'A', deptId: baDept.id, courseCode: 'BBA' },
+    { name: 'Rajat Kapoor', semester: 1, section: 'A', deptId: baDept.id, courseCode: 'BBA' },
+    { name: 'Ravi Shankar', semester: 1, section: 'B', deptId: baDept.id, courseCode: 'BBA' },
+    { name: 'Pallavi Desai', semester: 1, section: 'B', deptId: baDept.id, courseCode: 'BBA' },
+    // Semester 3
+    { name: 'Nisha Agarwal', semester: 3, section: 'A', deptId: baDept.id, courseCode: 'BBA' },
+    { name: 'Amit Saxena', semester: 3, section: 'A', deptId: baDept.id, courseCode: 'BBA' },
+    { name: 'Kavya Menon', semester: 3, section: 'B', deptId: baDept.id, courseCode: 'BBA' },
+    // Semester 5
+    { name: 'Megha Bhatia', semester: 5, section: 'A', deptId: baDept.id, courseCode: 'BBA' },
+    { name: 'Siddharth Roy', semester: 5, section: 'A', deptId: baDept.id, courseCode: 'BBA' },
+    { name: 'Kunal Thakur', semester: 5, section: 'B', deptId: baDept.id, courseCode: 'BBA' },
 
-    // Commerce Students (8 students)
-    { name: 'Sakshi Mittal', semester: 1, section: 'A', deptId: comDept.id },
-    { name: 'Varun Malhotra', semester: 1, section: 'A', deptId: comDept.id },
-    { name: 'Kritika Shah', semester: 3, section: 'A', deptId: comDept.id },
-    { name: 'Pankaj Gupta', semester: 3, section: 'B', deptId: comDept.id },
-    { name: 'Anjali Sharma', semester: 5, section: 'A', deptId: comDept.id },
-    { name: 'Nitin Jain', semester: 5, section: 'A', deptId: comDept.id },
-    { name: 'Shruti Agrawal', semester: 1, section: 'B', deptId: comDept.id },
-    { name: 'Manish Tiwari', semester: 3, section: 'A', deptId: comDept.id },
+    // =====================================
+    // Commerce Department - BCom
+    // =====================================
+    // Semester 1
+    { name: 'Sakshi Mittal', semester: 1, section: 'A', deptId: comDept.id, courseCode: 'BCom' },
+    { name: 'Varun Malhotra', semester: 1, section: 'A', deptId: comDept.id, courseCode: 'BCom' },
+    { name: 'Shruti Agrawal', semester: 1, section: 'B', deptId: comDept.id, courseCode: 'BCom' },
+    // Semester 3
+    { name: 'Kritika Shah', semester: 3, section: 'A', deptId: comDept.id, courseCode: 'BCom' },
+    { name: 'Pankaj Gupta', semester: 3, section: 'A', deptId: comDept.id, courseCode: 'BCom' },
+    { name: 'Manish Tiwari', semester: 3, section: 'B', deptId: comDept.id, courseCode: 'BCom' },
+    // Semester 5
+    { name: 'Anjali Sharma', semester: 5, section: 'A', deptId: comDept.id, courseCode: 'BCom' },
+    { name: 'Nitin Jain', semester: 5, section: 'A', deptId: comDept.id, courseCode: 'BCom' },
 
-    // Science Students (6 students)
-    { name: 'Gaurav Pandey', semester: 1, section: 'A', deptId: sciDept.id },
-    { name: 'Shikha Verma', semester: 1, section: 'A', deptId: sciDept.id },
-    { name: 'Ashish Rana', semester: 3, section: 'A', deptId: sciDept.id },
-    { name: 'Neetu Singh', semester: 3, section: 'B', deptId: sciDept.id },
-    { name: 'Harsh Vardhan', semester: 5, section: 'A', deptId: sciDept.id },
-    { name: 'Simran Kaur', semester: 5, section: 'A', deptId: sciDept.id },
+    // =====================================
+    // Science Department - BSc Math
+    // =====================================
+    // Semester 1
+    { name: 'Gaurav Pandey', semester: 1, section: 'A', deptId: sciDept.id, courseCode: 'BSc_Math' },
+    { name: 'Shikha Verma', semester: 1, section: 'A', deptId: sciDept.id, courseCode: 'BSc_Math' },
+    // Semester 3
+    { name: 'Ashish Rana', semester: 3, section: 'A', deptId: sciDept.id, courseCode: 'BSc_Math' },
+    { name: 'Neetu Singh', semester: 3, section: 'A', deptId: sciDept.id, courseCode: 'BSc_Math' },
+    // Semester 5
+    { name: 'Harsh Vardhan', semester: 5, section: 'A', deptId: sciDept.id, courseCode: 'BSc_Math' },
+    { name: 'Simran Kaur', semester: 5, section: 'A', deptId: sciDept.id, courseCode: 'BSc_Math' },
 
-    // Arts Students (6 students)
-    { name: 'Ishaan Malhotra', semester: 1, section: 'A', deptId: artDept.id },
-    { name: 'Aditi Sharma', semester: 1, section: 'B', deptId: artDept.id },
-    { name: 'Tanvi Joshi', semester: 3, section: 'A', deptId: artDept.id },
-    { name: 'Vivek Singh', semester: 3, section: 'A', deptId: artDept.id },
-    { name: 'Riya Kapoor', semester: 5, section: 'A', deptId: artDept.id },
-    { name: 'Aryan Gupta', semester: 5, section: 'A', deptId: artDept.id },
+    // =====================================
+    // Arts Department - BA English
+    // =====================================
+    // Semester 1
+    { name: 'Ishaan Malhotra', semester: 1, section: 'A', deptId: artDept.id, courseCode: 'BA_English' },
+    { name: 'Aditi Sharma', semester: 1, section: 'A', deptId: artDept.id, courseCode: 'BA_English' },
+    // Semester 3
+    { name: 'Tanvi Joshi', semester: 3, section: 'A', deptId: artDept.id, courseCode: 'BA_English' },
+    { name: 'Vivek Singh', semester: 3, section: 'A', deptId: artDept.id, courseCode: 'BA_English' },
+    // Semester 5
+    { name: 'Riya Kapoor', semester: 5, section: 'A', deptId: artDept.id, courseCode: 'BA_English' },
+    { name: 'Aryan Gupta', semester: 5, section: 'A', deptId: artDept.id, courseCode: 'BA_English' },
   ];
 
   const studentUsers: User[] = [];
@@ -450,20 +504,10 @@ async function main() {
   // ===========================
   console.log('\n📝 Enrolling students in courses...');
 
-  const bcaCourse = courses.find(c => c.code === 'BCA')!;
-  const bbaCourse = courses.find(c => c.code === 'BBA')!;
-  const bcomCourse = courses.find(c => c.code === 'BCom')!;
-  const bscMathCourse = courses.find(c => c.code === 'BSc_Math')!;
-  const baEngCourse = courses.find(c => c.code === 'BA_English')!;
-
-  for (const student of studentUsers) {
-    let courseToEnroll: Course | undefined;
-    
-    if (student.departmentId === csDept.id) courseToEnroll = bcaCourse;
-    else if (student.departmentId === baDept.id) courseToEnroll = bbaCourse;
-    else if (student.departmentId === comDept.id) courseToEnroll = bcomCourse;
-    else if (student.departmentId === sciDept.id) courseToEnroll = bscMathCourse;
-    else if (student.departmentId === artDept.id) courseToEnroll = baEngCourse;
+  for (let i = 0; i < studentUsers.length; i++) {
+    const student = studentUsers[i];
+    const studentData = studentNames[i];
+    const courseToEnroll = courses.find(c => c.code === studentData.courseCode);
 
     if (courseToEnroll) {
       await prisma.studentCourse.upsert({
@@ -471,9 +515,10 @@ async function main() {
         update: {},
         create: { studentId: student.id, courseId: courseToEnroll.id },
       });
+      console.log(`   ✓ ${studentData.name} → ${courseToEnroll.code} (Sem ${studentData.semester}, Section ${studentData.section})`);
     }
   }
-  console.log(`   ✓ Enrolled ${studentUsers.length} students in courses`);
+  console.log(`   ✓ Total enrolled: ${studentUsers.length} students`);
 
   // ===========================
   // SEED TIMETABLES

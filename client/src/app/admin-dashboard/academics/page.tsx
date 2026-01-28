@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, Calendar as CalendarIcon, Clock, Layers, Edit, BookOpen, GraduationCap, Users } from "lucide-react"
 import { IconUsers } from "@tabler/icons-react"
 import { Calendar } from "@/components/ui/calendar"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import {
     Table,
     TableBody,
@@ -26,6 +28,7 @@ import { toast } from "sonner"
 import { CreateAcademicYearDialog } from "@/components/academic/create-year-dialog"
 import { CreateEventDialog } from "@/components/academic/create-event-dialog"
 import { CreateSubjectDialog } from "@/components/academic/create-subject-dialog"
+import type { DayButtonProps } from "react-day-picker"
 
 export default function AcademicsPage() {
     const [date, setDate] = useState<Date | undefined>(new Date())
@@ -56,6 +59,56 @@ export default function AcademicsPage() {
         }
         loadData()
     }, [])
+
+    // Create a map of dates to events for quick lookup
+    const eventsByDate = useMemo(() => {
+        const map = new Map<string, AcademicEvent[]>();
+        events.forEach(event => {
+            const dateKey = new Date(event.date).toDateString();
+            if (!map.has(dateKey)) {
+                map.set(dateKey, []);
+            }
+            map.get(dateKey)!.push(event);
+        });
+        return map;
+    }, [events]);
+
+    // Custom DayButton component with tooltip
+    const CustomDayButton = (props: DayButtonProps) => {
+        const { day, ...buttonProps } = props;
+        const dateKey = day.date.toDateString();
+        const dayEvents = eventsByDate.get(dateKey);
+
+        if (dayEvents && dayEvents.length > 0) {
+            return (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button {...buttonProps}>{day.date.getDate()}</button>
+                        </TooltipTrigger>
+                        <TooltipContent 
+                            side="top" 
+                            className="max-w-[200px] bg-slate-900 text-white px-3 py-2 rounded-lg shadow-xl"
+                        >
+                            <div className="space-y-1">
+                                {dayEvents.map(event => (
+                                    <div key={event.id} className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                            event.type === 'HOLIDAY' ? 'bg-amber-400' :
+                                            event.type === 'EXAM' ? 'bg-blue-400' : 'bg-red-400'
+                                        }`} />
+                                        <span className="text-xs font-medium">{event.title}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            );
+        }
+
+        return <button {...buttonProps}>{day.date.getDate()}</button>;
+    };
 
     return (
         <div className="flex flex-col gap-6 p-6">
@@ -225,53 +278,191 @@ export default function AcademicsPage() {
 
                 {/* --- Calendar Tab --- */}
                 <TabsContent value="calendar" className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-12 items-start">
-                        <Card className="md:col-span-12 lg:col-span-8">
-                            <CardHeader>
-                                <div className="flex items-center gap-2">
-                                    <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                                    <CardTitle>Academic Timeline</CardTitle>
+                    {/* Calendar Legend */}
+                    <div className="flex flex-wrap items-center gap-4 px-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                            <span className="text-xs text-muted-foreground">Event</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-amber-500" />
+                            <span className="text-xs text-muted-foreground">Holiday</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                            <span className="text-xs text-muted-foreground">Exam</span>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-12 items-start">
+                        <Card className="md:col-span-12 lg:col-span-8 overflow-hidden border-0 shadow-xl">
+                            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 border-b">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-primary/10 rounded-xl">
+                                            <CalendarIcon className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-xl">Academic Calendar</CardTitle>
+                                            <p className="text-sm text-muted-foreground mt-0.5">
+                                                {events.length} events scheduled
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-bold text-primary">
+                                            {new Date().toLocaleString('default', { month: 'long' })}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {new Date().getFullYear()}
+                                        </div>
+                                    </div>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="p-6">
+                            </div>
+                            <CardContent className="p-6 bg-gradient-to-b from-slate-50/50 to-white">
                                 <Calendar
                                     mode="single"
                                     selected={date}
                                     onSelect={setDate}
-                                    className="rounded-md border shadow w-full flex justify-center p-4"
+                                    modifiers={{
+                                        event: events.filter(e => e.type === "EVENT").map(e => new Date(e.date)),
+                                        holiday: events.filter(e => e.type === "HOLIDAY").map(e => new Date(e.date)),
+                                        exam: events.filter(e => e.type === "EXAM").map(e => new Date(e.date)),
+                                    }}
+                                    modifiersClassNames={{
+                                        event: "!bg-red-500 !text-white hover:!bg-red-600 font-bold",
+                                        holiday: "!bg-amber-500 !text-white hover:!bg-amber-600 font-bold",
+                                        exam: "!bg-blue-500 !text-white hover:!bg-blue-600 font-bold",
+                                    }}
+                                    className="rounded-xl border-0 shadow-sm bg-white w-full"
+                                    classNames={{
+                                        months: "relative flex flex-col sm:flex-row gap-4 w-full justify-center",
+                                        month: "space-y-4 w-full",
+                                        month_caption: "flex justify-center pt-2 relative items-center mb-4",
+                                        caption_label: "text-lg font-semibold text-foreground",
+                                        nav: "flex items-center gap-1",
+                                        button_previous: "absolute left-2 h-9 w-9 bg-slate-100 hover:bg-slate-200 rounded-lg p-0 opacity-70 hover:opacity-100 transition-all inline-flex items-center justify-center border-0 z-10",
+                                        button_next: "absolute right-2 h-9 w-9 bg-slate-100 hover:bg-slate-200 rounded-lg p-0 opacity-70 hover:opacity-100 transition-all inline-flex items-center justify-center border-0 z-10",
+                                        month_grid: "w-full border-collapse",
+                                        weekdays: "grid grid-cols-7",
+                                        weekday: "text-muted-foreground font-semibold text-xs uppercase tracking-wider h-10 flex items-center justify-center",
+                                        week: "grid grid-cols-7 mt-1",
+                                        day: "h-12 w-full text-center text-sm p-1 relative flex items-center justify-center",
+                                        day_button: "h-10 w-10 p-0 font-medium aria-selected:opacity-100 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center",
+                                        selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-lg",
+                                        today: "bg-slate-100 text-slate-900 font-bold ring-2 ring-primary/20 rounded-lg",
+                                        outside: "text-muted-foreground opacity-30",
+                                        disabled: "text-muted-foreground opacity-50",
+                                        hidden: "invisible",
+                                    }}
+                                    components={{
+                                        DayButton: CustomDayButton,
+                                    }}
                                 />
                             </CardContent>
                         </Card>
 
                         <div className="md:col-span-12 lg:col-span-4 space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Upcoming Events</CardTitle>
+                            {/* Selected Date Info */}
+                            {date && (
+                                <Card className="border-0 shadow-lg bg-gradient-to-br from-primary to-primary/80 text-white overflow-hidden">
+                                    <CardContent className="p-5">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-xs font-medium uppercase tracking-wider opacity-80">
+                                                    Selected Date
+                                                </div>
+                                                <div className="text-3xl font-bold mt-1">
+                                                    {date.getDate()}
+                                                </div>
+                                                <div className="text-sm opacity-90">
+                                                    {date.toLocaleString('default', { weekday: 'long', month: 'long', year: 'numeric' })}
+                                                </div>
+                                            </div>
+                                            <div className="text-6xl font-black opacity-20">
+                                                {date.toLocaleString('default', { month: 'short' })}
+                                            </div>
+                                        </div>
+                                        {events.filter(e => {
+                                            const eventDate = new Date(e.date);
+                                            return eventDate.toDateString() === date.toDateString();
+                                        }).length > 0 && (
+                                            <div className="mt-3 pt-3 border-t border-white/20">
+                                                <div className="text-xs font-semibold uppercase tracking-wider opacity-80 mb-2">
+                                                    Events on this day
+                                                </div>
+                                                {events.filter(e => {
+                                                    const eventDate = new Date(e.date);
+                                                    return eventDate.toDateString() === date.toDateString();
+                                                }).map(event => (
+                                                    <div key={event.id} className="text-sm font-medium flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${
+                                                            event.type === 'HOLIDAY' ? 'bg-amber-400' :
+                                                            event.type === 'EXAM' ? 'bg-blue-400' : 'bg-red-400'
+                                                        }`} />
+                                                        {event.title}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            <Card className="border-0 shadow-lg overflow-hidden">
+                                <CardHeader className="bg-gradient-to-r from-slate-50 to-white border-b pb-4">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Clock className="h-4 w-4 text-muted-foreground" />
+                                            Upcoming Events
+                                        </CardTitle>
+                                        <Badge variant="secondary" className="font-bold">
+                                            {events.length}
+                                        </Badge>
+                                    </div>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="divide-y p-0">
                                     {events.length === 0 ? (
-                                        <p className="text-center py-6 text-muted-foreground">No events found.</p>
+                                        <div className="p-8 text-center">
+                                            <CalendarIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                                            <p className="text-muted-foreground">No events scheduled</p>
+                                        </div>
                                     ) : (
-                                        events.slice(0, 5).map(event => (
-                                            <div key={event.id} className="flex items-center gap-4">
-                                                <div className="bg-slate-100 p-2 rounded text-center min-w-[3rem]">
-                                                    <div className="text-[10px] font-bold text-muted-foreground uppercase">
+                                        events.slice(0, 4).map(event => (
+                                            <div key={event.id} className="flex items-center gap-4 p-4 hover:bg-slate-50/80 transition-colors">
+                                                <div className={`p-3 rounded-xl text-center min-w-[3.5rem] ${
+                                                    event.type === 'HOLIDAY' ? 'bg-amber-100 text-amber-700' :
+                                                    event.type === 'EXAM' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">
                                                         {new Date(event.date).toLocaleString('default', { month: 'short' })}
                                                     </div>
-                                                    <div className="text-lg font-bold">
+                                                    <div className="text-xl font-black">
                                                         {new Date(event.date).getDate()}
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <div className="font-medium text-sm">{event.title}</div>
-                                                    <Badge variant="outline" className="text-[9px] uppercase tracking-wider">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-semibold text-sm truncate">{event.title}</div>
+                                                    <Badge 
+                                                        variant="outline" 
+                                                        className={`text-[9px] uppercase tracking-wider mt-1 border-0 ${
+                                                            event.type === 'HOLIDAY' ? 'bg-amber-100 text-amber-700' :
+                                                            event.type === 'EXAM' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                                        }`}
+                                                    >
                                                         {event.type}
                                                     </Badge>
                                                 </div>
                                             </div>
                                         ))
                                     )}
-                                    <Button variant="outline" className="w-full">View All</Button>
+                                    <div className="p-3 bg-slate-50/50 border-t">
+                                        <Link href="/admin-dashboard/events">
+                                            <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground">
+                                                View All Events
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </CardContent>
                             </Card>
                             <CreateEventDialog />

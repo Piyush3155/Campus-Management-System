@@ -23,6 +23,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AIModule } from './ai/ai.module';
+import { CourseModule } from './course/course.module';
 
 @Module({
   imports: [
@@ -47,7 +48,8 @@ import { AIModule } from './ai/ai.module';
     ReportsModule,
     AssignmentsModule,
     DashboardModule,
-    AIModule
+    AIModule,
+    CourseModule
   ],
   controllers: [AppController],
   providers: [AppService],
