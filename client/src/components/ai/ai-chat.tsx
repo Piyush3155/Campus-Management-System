@@ -141,7 +141,7 @@ export function AIChat() {
   }, [user?.role]);
 
   return (
-    <Card className="h-full flex flex-col border-none shadow-none bg-transparent">
+    <Card className="h-full flex flex-col border-none shadow-none bg-transparent overflow-y-scroll">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
@@ -208,7 +208,7 @@ export function AIChat() {
           </div>
         </ScrollArea>
 
-        <div className="border-t p-4">
+        <div className="border-t p-4 sticky bottom-0 bg-background">
           <div className="flex gap-2">
             <Input
               ref={inputRef}

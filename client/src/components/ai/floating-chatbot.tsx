@@ -25,7 +25,7 @@ export function FloatingChatbot() {
       {/* Constraints Container */}
       <div 
         ref={constraintsRef} 
-        className="fixed inset-0 pointer-events-none z-50 overflow-hidden"
+        className="fixed inset-0 pointer-events-none z-50 overflow-y-scroll"
       >
         <motion.div
           drag

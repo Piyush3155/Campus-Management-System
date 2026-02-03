@@ -74,6 +74,11 @@ export interface TimetableEntry {
         id: string;
         name: string;
     };
+    departmentId?: string;
+    department?: {
+        id: string;
+        name: string;
+    };
     room?: string;
     semester?: number;
     section?: string;

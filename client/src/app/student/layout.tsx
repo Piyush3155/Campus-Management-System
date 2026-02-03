@@ -19,7 +19,7 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar"
-import { FloatingChatbot } from "@/components/ai/floating-chatbot"
+// import { FloatingChatbot } from "@/components/ai/floating-chatbot"
 
 export default function StudentLayout({
   children,
@@ -111,7 +111,7 @@ export default function StudentLayout({
               )
             })}
           </nav>
-           <FloatingChatbot />
+           {/* <FloatingChatbot /> */}
         </SidebarInset>
       </SidebarProvider>
     </div>

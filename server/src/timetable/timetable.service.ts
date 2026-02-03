@@ -74,6 +74,12 @@ export class TimetableService {
             include: {
                 subject: true,
                 department: true,
+                staff: {
+                    select: {
+                        id: true,
+                        name: true,
+                    }
+                },
             },
             orderBy: [
                 { dayOfWeek: 'asc' }, // Note: Enum sort might not be chronological (M, T, W...). 

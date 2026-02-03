@@ -4,7 +4,6 @@ import React, { useState } from "react"
 import { 
   Sparkles, 
   Search, 
-  ArrowRight, 
   GraduationCap, 
   ExternalLink,
   ChevronDown,
@@ -70,9 +69,9 @@ export default function CareerRoadmapPage() {
       setExpandedPhases([0]) // Expand first phase by default
       localStorage.setItem("ai_career_roadmap", JSON.stringify(data))
       toast.success("Roadmap generated successfully!")
-    } catch (error: any) {
-      console.error(error)
-      toast.error(error.message || "Failed to generate roadmap. Please check your API key.")
+    } catch{
+     
+      toast.error("Failed to generate roadmap. Please try again.")
     } finally {
       setLoading(false)
     }

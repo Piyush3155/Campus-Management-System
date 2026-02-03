@@ -24,6 +24,7 @@ import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AIModule } from './ai/ai.module';
 import { CourseModule } from './course/course.module';
+import { GoogleMeetModule } from './googlemeet/googlemeet.module';
 
 @Module({
   imports: [
@@ -49,7 +50,8 @@ import { CourseModule } from './course/course.module';
     AssignmentsModule,
     DashboardModule,
     AIModule,
-    CourseModule
+    CourseModule,
+    GoogleMeetModule
   ],
   controllers: [AppController],
   providers: [AppService],

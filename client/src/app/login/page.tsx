@@ -2,11 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
-import { auth } from "../../lib/firebase"
 import { useAuth } from "@/context/AuthContext"
 import { AuthPage } from "@/components/ui/auth-page"
-import { Mail, Lock, Loader2, GraduationCap, Shield, Eye, EyeOff, AlertCircle } from "lucide-react"
+import { Mail, Lock, Loader2, Shield, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
@@ -17,14 +15,14 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const initialMode = (searchParams.get("mode") as LoginMode) || "student"
 
-  const [mode, setMode] = useState<LoginMode>(initialMode)
+  const [mode,] = useState<LoginMode>(initialMode)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const router = useRouter()
-  const { isAuthenticated, loginCredentials, loginGoogle, user, loading: authLoading } = useAuth()
+  const { isAuthenticated, loginCredentials, user, loading: authLoading } = useAuth()
 
   // Handle Redirects
   useEffect(() => {
@@ -70,20 +68,20 @@ function LoginContent() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setLoading(true)
-    try {
-      const provider = new GoogleAuthProvider()
-      provider.setCustomParameters({ hd: process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAIN || "*" })
-      await signInWithPopup(auth, provider)
-      await loginGoogle()
-    } catch (error) {
-      console.error("Google Sign-In error:", error)
-      toast.error("Google Sign-In failed")
-    } finally {
-      setLoading(false)
-    }
-  }
+  // const handleGoogleLogin = async () => {
+  //   setLoading(true)
+  //   try {
+  //     const provider = new GoogleAuthProvider()
+  //     provider.setCustomParameters({ hd: process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAIN || "*" })
+  //     await signInWithPopup(auth, provider)
+  //     await loginGoogle()
+  //   } catch (error) {
+  //     console.error("Google Sign-In error:", error)
+  //     toast.error("Google Sign-In failed")
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
 
   return (
     <AuthPage 
@@ -108,7 +106,7 @@ function LoginContent() {
             {/* Google Login for Students */}
             {mode === "student" && (
               <div className="space-y-4">
-                <button
+                {/* <button
                   onClick={handleGoogleLogin}
                   disabled={loading}
                   className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-border bg-background hover:bg-accent/50 transition-all duration-200 font-semibold disabled:opacity-50"
@@ -126,13 +124,13 @@ function LoginContent() {
                       <span>Continue with College Email</span>
                     </>
                   )}
-                </button>
+                </button> */}
 
-                <div className="relative flex items-center gap-4">
+                {/* <div className="relative flex items-center gap-4">
                   <div className="flex-1 h-px bg-border/60"></div>
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Or login with credentials</span>
                   <div className="flex-1 h-px bg-border/60"></div>
-                </div>
+                </div> */}
               </div>
             )}
 
